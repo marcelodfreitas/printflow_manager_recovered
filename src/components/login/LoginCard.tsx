@@ -8,21 +8,24 @@ import {
   EyeOff,
   LockKeyhole,
   Mail,
-  Sparkles,
   User,
 } from "lucide-react";
 import Button from "@/components/ui/Button";
 import { useAuth } from "@/contexts/AuthContext";
+import { createClient } from "@/lib/supabase/client";
 
 export function LoginCard() {
   const router = useRouter();
   const { login, register } = useAuth();
+  const supabase = createClient();
+
   const [mode, setMode] = useState<"login" | "register">("login");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
@@ -44,6 +47,24 @@ export function LoginCard() {
     setLoading(false);
   }
 
+  async function handleGoogleLogin() {
+    setError("");
+    setGoogleLoading(true);
+
+    const { error } = await supabase.auth.signInWithOAuth({
+  provider: "google",
+  options: {
+    redirectTo: `${window.location.origin}/callback`,
+  },
+});
+
+    if (error) {
+      console.error("ERRO GOOGLE LOGIN:", error);
+      setError("Não foi possível entrar com o Google. Tente novamente.");
+      setGoogleLoading(false);
+    }
+  }
+
   function selectMode(nextMode: "login" | "register") {
     setMode(nextMode);
     setError("");
@@ -55,33 +76,67 @@ export function LoginCard() {
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent" />
 
         <div className="flex w-full flex-col items-center gap-5">
-  <div className="w-full">
-    <h2 className="text-center text-2xl font-semibold tracking-normal text-white">
-      {mode === "login" ? "Acesse o PrintFlow" : "Comece no PrintFlow"}
-    </h2>
+          <div className="w-full">
+            <h2 className="text-center text-2xl font-semibold tracking-normal text-white">
+              {mode === "login" ? "Acesse o PrintFlow" : "Comece no PrintFlow"}
+            </h2>
 
-    <p className="mt-2 text-center text-sm leading-6 text-slate-400">
-      {mode === "login"
-        ? "Acompanhe pedidos, produção em tempo real."
-        : "Organize a operação desde o primeiro pedido."}
-    </p>
-  </div>
+            <p className="mt-2 text-center text-sm leading-6 text-slate-400">
+              {mode === "login"
+                ? "Acompanhe pedidos, produção em tempo real."
+                : "Organize a operação desde o primeiro pedido."}
+            </p>
+          </div>
 
-  <div className="grid w-full max-w-sm grid-cols-2 rounded-[8px] border border-white/10 bg-white/[.045] p-1">
-    <ModeButton active={mode === "login"} onClick={() => selectMode("login")}>
-      Login
-    </ModeButton>
+          <div className="grid w-full max-w-sm grid-cols-2 rounded-[8px] border border-white/10 bg-white/[.045] p-1">
+            <ModeButton
+              active={mode === "login"}
+              onClick={() => selectMode("login")}
+            >
+              Login
+            </ModeButton>
 
-    <ModeButton
-      active={mode === "register"}
-      onClick={() => selectMode("register")}
-    >
-      Cadastro
-    </ModeButton>
-  </div>
-</div>
+            <ModeButton
+              active={mode === "register"}
+              onClick={() => selectMode("register")}
+            >
+              Cadastro
+            </ModeButton>
+          </div>
+        </div>
 
-        <form onSubmit={handleSubmit} className="mt-5 space-y-2">
+        {mode === "login" && (
+          <>
+            <button
+              type="button"
+              onClick={handleGoogleLogin}
+              disabled={loading || googleLoading}
+              className="mt-5 flex h-12 w-full items-center justify-center gap-3 rounded-[8px] border border-white/15 bg-white/[.055] px-5 text-sm font-semibold text-white transition duration-300 hover:border-white/25 hover:bg-white/[.09] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {googleLoading ? (
+                <>
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+                  Conectando...
+                </>
+              ) : (
+                <>
+                  <GoogleIcon />
+                  Continuar com Google
+                </>
+              )}
+            </button>
+
+            <div className="my-5 flex items-center gap-3">
+              <div className="h-px flex-1 bg-white/10" />
+              <span className="text-xs uppercase tracking-[0.16em] text-slate-500">
+                ou
+              </span>
+              <div className="h-px flex-1 bg-white/10" />
+            </div>
+          </>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-2">
           {mode === "register" && (
             <LoginField
               id="name"
@@ -140,7 +195,7 @@ export function LoginCard() {
             type="submit"
             size="lg"
             className="login-shine group h-12 w-full overflow-hidden rounded-[8px] border border-[#ffb06c]/35 bg-[linear-gradient(110deg,#fd6401,#ff9f1a,#fd6401)] bg-[length:200%_100%] px-5 font-semibold text-[#170b02] shadow-xl shadow-[#fd6401]/25 transition duration-300 hover:scale-[1.03] hover:shadow-[#fd6401]/40 focus:ring-[#fd6401]/35 focus:ring-offset-[#080d16] disabled:scale-100"
-            disabled={loading}
+            disabled={loading || googleLoading}
           >
             {loading ? (
               <span className="flex items-center justify-center gap-2">
@@ -160,6 +215,7 @@ export function LoginCard() {
           <span className="text-slate-500">
             {mode === "login" ? "Não tem conta?" : "Já possui conta?"}
           </span>
+
           <button
             type="button"
             onClick={() => selectMode(mode === "login" ? "register" : "login")}
@@ -170,6 +226,34 @@ export function LoginCard() {
         </div>
       </div>
     </div>
+  );
+}
+
+function GoogleIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+    >
+      <path
+        fill="#4285F4"
+        d="M21.6 12.23c0-.79-.07-1.55-.2-2.27H12v4.3h5.38a4.6 4.6 0 0 1-2 3.02v2.5h3.24c1.9-1.75 2.98-4.33 2.98-7.55Z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 22c2.7 0 4.96-.9 6.62-2.45l-3.24-2.5c-.9.6-2.04.95-3.38.95-2.6 0-4.8-1.76-5.6-4.12H3.06v2.58A10 10 0 0 0 12 22Z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M6.4 13.88a6.01 6.01 0 0 1 0-3.76V7.54H3.06a10 10 0 0 0 0 8.92l3.34-2.58Z"
+      />
+      <path
+        fill="#EA4335"
+        d="M12 6c1.47 0 2.8.5 3.84 1.5l2.88-2.88C16.96 2.93 14.7 2 12 2a10 10 0 0 0-8.94 5.54L6.4 10.12C7.2 7.76 9.4 6 12 6Z"
+      />
+    </svg>
   );
 }
 
@@ -220,9 +304,13 @@ function LoginField({
 }) {
   return (
     <label className="login-input block" style={{ animationDelay }}>
-      <span className="mb-2 block text-sm font-medium text-slate-300">{label}</span>
+      <span className="mb-2 block text-sm font-medium text-slate-300">
+        {label}
+      </span>
+
       <span className="relative block">
         <Icon className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-white/30" />
+
         <input
           id={id}
           type={type}
@@ -232,6 +320,7 @@ function LoginField({
           required
           className="block h-12 w-full rounded-[8px] border border-white/10 bg-white/[.055] px-4 pl-12 pr-12 text-sm text-white shadow-inner shadow-black/10 outline-none transition placeholder:text-white/28 focus:border-[#fd6401]/60 focus:bg-white/[.08] focus:ring-4 focus:ring-[#fd6401]/10"
         />
+
         {action}
       </span>
     </label>
