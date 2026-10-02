@@ -15,23 +15,21 @@ export default function Input({
 }: InputProps) {
   return (
     <div className="flex flex-col gap-2">
-
       {label && (
-        <label className="text-sm font-medium text-white">
-          {label}
-        </label>
+        <label className="text-sm font-medium text-white">{label}</label>
       )}
 
       <div className="relative">
-
         {icon && (
-          <div className="
-            absolute 
-            left-3 
-            top-1/2 
-            -translate-y-1/2
-            text-muted
-          ">
+          <div
+            className="
+              absolute
+              left-3
+              top-1/2
+              -translate-y-1/2
+              text-muted
+            "
+          >
             {icon}
           </div>
         )}
@@ -39,42 +37,25 @@ export default function Input({
         <input
           {...props}
           className={`
-            w-full
-            rounded-xl
-            border
-            border-white/10
-            bg-white/[0.03]
-            px-4
-            py-3
-            text-white
-            placeholder:text-muted
-            outline-none
-            transition-all
-            focus:border-primary
-            focus:ring-2
-            focus:ring-primary/20
+  w-full
+  rounded-xl
+  border
+  bg-white/[0.03]
+  px-4
+  py-3
+  text-white
+  placeholder:text-muted
+  outline-none
+  transition-all
+  focus:ring-2
 
-            ${icon ? "pl-11" : ""}
+  ${icon ? "pl-11" : ""}
+${error ? "border-red-500 focus:border-red-500 focus:ring-red-500/20" : ""}
 
-            ${
-              error
-                ? "border-danger focus:border-danger focus:ring-danger/20"
-                : ""
-            }
-
-            ${className}
-          `}
+  ${className}
+`}
         />
-
       </div>
-
-
-      {error && (
-        <span className="text-xs text-danger">
-          {error}
-        </span>
-      )}
-
     </div>
   );
 }

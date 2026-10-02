@@ -19,7 +19,17 @@ export function formatCurrency(value: number): string {
 }
 
 export function formatDate(date: string): string {
-  return new Date(date).toLocaleDateString("pt-BR");
+  if (!date) return "";
+
+  const datePart = date.split("T")[0];
+
+  const [year, month, day] = datePart.split("-");
+
+  if (!year || !month || !day) {
+    return date;
+  }
+
+  return `${day}/${month}/${year}`;
 }
 
 export function formatDateTime(date: string): string {

@@ -39,6 +39,10 @@ const orderStatuses = [
 
 function StatusBadge({ status }: { status: string }) {
   const config = {
+    draft: {
+      variant: "default" as const,
+      label: "Rascunho",
+    },
     pending: {
       variant: "warning" as const,
       label: "Pendente",

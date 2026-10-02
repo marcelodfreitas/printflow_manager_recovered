@@ -268,6 +268,7 @@ export const mockQuotes: Quote[] = [
     productId: "5",
     productName: "Suporte de Monitor",
     clientId: "1",
+    discountPercent: 0,
     clientName: "João Silva",
     status: "approved",
     items: [
@@ -291,6 +292,7 @@ export const mockQuotes: Quote[] = [
     productId: "3",
     productName: "Engrenagem Personalizada",
     clientId: "3",
+    discountPercent: 0,
     clientName: "Carlos Pereira",
     status: "draft",
     items: [
@@ -321,6 +323,7 @@ export const mockQuotes: Quote[] = [
     productId: "1",
     productName: "Vaso Geométrico",
     clientId: "2",
+    discountPercent: 0,
     clientName: "Maria Souza",
     status: "sent",
     items: [

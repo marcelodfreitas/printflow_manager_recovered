@@ -105,6 +105,7 @@ export interface Quote {
   subtotal: number;
   tax: number;
   total: number;
+  discountPercent: number;
   notes?: string;
   validUntil: string;
   createdAt: string;
