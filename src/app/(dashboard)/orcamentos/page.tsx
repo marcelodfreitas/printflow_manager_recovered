@@ -2,8 +2,21 @@
 
 import { useState } from "react";
 import { jsPDF } from "jspdf";
-import { Plus, Search, FileDown, Trash2, Pencil } from "lucide-react";
+import {
+  Plus,
+  Search,
+  FileDown,
+  Trash2,
+  Pencil,
+  FileText,
+  Send,
+  CheckCircle2,
+  Clock3,
+  XCircle,
+} from "lucide-react";
+
 import logo from "@/assets/logo.png";
+
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
@@ -18,11 +31,16 @@ import {
 } from "@/components/ui/Table";
 import Modal from "@/components/ui/Modal";
 import { Badge } from "@/components/ui/Badge";
+
 import type { Quote, QuoteItem } from "@/types";
 import { useQuotes } from "@/hooks/useQuotes";
 import { useClients } from "@/hooks/useClients";
 import { useProducts } from "@/hooks/useProducts";
-import { formatCurrency, formatDate, translateStatus } from "@/lib/utils";
+import {
+  formatCurrency,
+  formatDate,
+  translateStatus,
+} from "@/lib/utils";
 
 interface QuoteFormItem {
   description: string;
@@ -49,7 +67,7 @@ function StatusBadge({ status }: { status: string }) {
       label: "Enviado",
     },
     approved: {
-      variant: "info" as const,
+      variant: "success" as const,
       label: "Aprovado",
     },
     rejected: {
@@ -57,7 +75,7 @@ function StatusBadge({ status }: { status: string }) {
       label: "Rejeitado",
     },
     converted: {
-      variant: "success" as const,
+      variant: "info" as const,
       label: "Convertido",
     },
   };
@@ -104,15 +122,32 @@ export default function QuotesPage() {
   });
 
   const filtered = quotes.filter((q) => {
-    const matchesSearch =
-      q.clientName.toLowerCase().includes(search.toLowerCase()) ||
-      (q.productName ?? "").toLowerCase().includes(search.toLowerCase()) ||
-      String(q.quoteNumber ?? "").includes(search.toLowerCase());
+    const term = search.toLowerCase().trim();
 
-    const matchesStatus = statusFilter === "all" || q.status === statusFilter;
+    const matchesSearch =
+      q.clientName.toLowerCase().includes(term) ||
+      (q.productName ?? "").toLowerCase().includes(term) ||
+      String(q.quoteNumber ?? "").includes(term);
+
+    const matchesStatus =
+      statusFilter === "all" || q.status === statusFilter;
 
     return matchesSearch && matchesStatus;
   });
+
+  const totalQuotes = quotes.length;
+  const draftQuotes = quotes.filter((q) => q.status === "draft").length;
+  const sentQuotes = quotes.filter((q) => q.status === "sent").length;
+  const approvedQuotes = quotes.filter(
+    (q) => q.status === "approved",
+  ).length;
+  const rejectedQuotes = quotes.filter(
+    (q) => q.status === "rejected",
+  ).length;
+
+  const approvedValue = quotes
+    .filter((q) => q.status === "approved")
+    .reduce((acc, q) => acc + Number(q.total ?? 0), 0);
 
   function openCreate() {
     setEditingQuote(null);
@@ -160,10 +195,10 @@ export default function QuotesPage() {
         quote.discountPercent > 0
           ? String(quote.discountPercent)
           : "",
-      items: quote.items.map((i) => ({
-        description: i.description,
-        quantity: String(i.quantity),
-        unitPrice: String(i.unitPrice),
+      items: quote.items.map((item) => ({
+        description: item.description,
+        quantity: String(item.quantity),
+        unitPrice: String(item.unitPrice),
       })),
     });
 
@@ -186,6 +221,7 @@ export default function QuotesPage() {
       (
         document.getElementById("product") as HTMLInputElement | null
       )?.reportValidity();
+
       return;
     }
 
@@ -248,39 +284,19 @@ export default function QuotesPage() {
   }
 
   function handleSave(e: React.FormEvent) {
-  e.preventDefault();
+    e.preventDefault();
 
-  const productName = form.productName.trim();
-  const clientName = form.clientName.trim();
+    const productName = form.productName.trim();
+    const clientName = form.clientName.trim();
 
-  const newErrors = {
-    product: productName ? "" : "required",
-    client: clientName ? "" : "required",
-  };
+    const newErrors = {
+      product: productName ? "" : "required",
+      client: clientName ? "" : "required",
+    };
 
-  setErrors(newErrors);
+    setErrors(newErrors);
 
-  if (newErrors.product || newErrors.client) {
-    return;
-  }
-
-    if (!productName) {
-      document
-        .getElementById("product")
-        ?.closest("form")
-        ?.querySelector<HTMLInputElement>("#product")
-        ?.reportValidity();
-
-      return;
-    }
-
-    if (!clientName) {
-      document
-        .getElementById("client")
-        ?.closest("form")
-        ?.querySelector<HTMLInputElement>("#client")
-        ?.reportValidity();
-
+    if (newErrors.product || newErrors.client) {
       return;
     }
 
@@ -357,9 +373,13 @@ export default function QuotesPage() {
 
     const items = quote ? quote.items || [] : form.items;
 
-    const subtotal = quote ? Number(quote.subtotal ?? 0) : calcSubtotal();
+    const subtotal = quote
+      ? Number(quote.subtotal ?? 0)
+      : calcSubtotal();
 
-    const total = quote ? Number(quote.total ?? 0) : calcTotal();
+    const total = quote
+      ? Number(quote.total ?? 0)
+      : calcTotal();
 
     const discountPercent = quote
       ? Number(quote.discountPercent ?? 0)
@@ -406,7 +426,11 @@ export default function QuotesPage() {
     doc.setFontSize(9);
     doc.setTextColor(253, 100, 1);
 
-    doc.text("Orçamento de impressão 3D", logoData ? 37 : 14, 20);
+    doc.text(
+      "Orçamento de impressão 3D",
+      logoData ? 37 : 14,
+      20,
+    );
 
     doc.setTextColor(180, 190, 205);
     doc.text("Data:", 150, 12);
@@ -475,7 +499,8 @@ export default function QuotesPage() {
     doc.setTextColor(40, 40, 40);
 
     items.forEach((item) => {
-      const itemTotal = Number(item.quantity) * Number(item.unitPrice);
+      const itemTotal =
+        Number(item.quantity) * Number(item.unitPrice);
 
       doc.text(item.description, 16, y);
 
@@ -531,9 +556,14 @@ export default function QuotesPage() {
       doc.setFontSize(10);
       doc.setTextColor(70, 70, 70);
 
-      doc.text(`Desconto PIX (${discountPercent}%)`, 150, y, {
-        align: "right",
-      });
+      doc.text(
+        `Desconto PIX (${discountPercent}%)`,
+        150,
+        y,
+        {
+          align: "right",
+        },
+      );
 
       doc.setTextColor(190, 60, 60);
 
@@ -576,7 +606,9 @@ export default function QuotesPage() {
 
     doc.save(
       `orcamento-${
-        quote?.quoteNumber ?? editingQuote?.quoteNumber ?? "novo"
+        quote?.quoteNumber ??
+        editingQuote?.quoteNumber ??
+        "novo"
       }.pdf`,
     );
   }
@@ -584,8 +616,10 @@ export default function QuotesPage() {
   if (loading) {
     return (
       <div className="relative min-h-screen bg-[#050914]">
-        <div className="flex h-96 items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-[var(--accent)]" />
+        <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.05)_1px,transparent_0)] bg-[size:32px_32px]" />
+
+        <div className="relative flex min-h-[60vh] items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/10 border-t-[var(--accent)]" />
         </div>
       </div>
     );
@@ -593,59 +627,205 @@ export default function QuotesPage() {
 
   return (
     <div className="relative min-h-screen bg-[#050914]">
+      {/* BACKGROUND */}
       <div className="pointer-events-none fixed -bottom-40 -right-40 h-[500px] w-[500px] rounded-full bg-[#071124]/60 blur-[120px]" />
 
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.06)_1px,transparent_0)] bg-[size:32px_32px]" />
+      <div className="pointer-events-none fixed -left-40 top-20 h-[420px] w-[420px] rounded-full bg-[rgba(var(--accent-rgb),0.025)] blur-[130px]" />
 
-      <div className="space-y-5 px-4 py-5 sm:space-y-6 sm:p-6">
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Card className="border border-white/10 bg-[#050914] backdrop-blur-2xl shadow-2xl shadow-black/40">
-            <CardContent className="p-6">
-              <p className="text-sm text-white">Total de Orçamentos</p>
+      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.05)_1px,transparent_0)] bg-[size:32px_32px]" />
 
-              <p className="text-2xl font-bold text-white/50">
-                {quotes.length}
-              </p>
-            </CardContent>
-          </Card>
+      <div className="relative space-y-6 px-4 py-5 sm:p-6">
+        {/* HEADER */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <div className="mb-2 flex items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-[rgba(var(--accent-rgb),0.20)] bg-[rgba(var(--accent-rgb),0.08)]">
+                <FileText className="h-4 w-4 text-[var(--accent)]" />
+              </div>
 
-          <Card className="border border-white/10 bg-[#050914] backdrop-blur-2xl shadow-2xl shadow-black/40">
-            <CardContent className="p-6">
-              <p className="text-sm text-white">Aprovados</p>
+              <span className="text-xs font-semibold uppercase tracking-[0.18em] text-white/35">
+                Comercial
+              </span>
+            </div>
 
-              <p className="text-2xl font-bold text-green-600">
-                {quotes.filter((q) => q.status === "approved").length}
-              </p>
-            </CardContent>
-          </Card>
+            <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+              Orçamentos
+            </h1>
 
-          <Card className="border border-white/10 bg-[#050914] backdrop-blur-2xl shadow-2xl shadow-black/40">
-            <CardContent className="p-6">
-              <p className="text-sm text-white">Valor Total Aprovado</p>
+            <p className="mt-1 text-sm text-white/40">
+              Crie, acompanhe e gerencie suas propostas comerciais.
+            </p>
+          </div>
 
-              <p className="text-2xl font-bold text-white/50">
-                {formatCurrency(
-                  quotes
-                    .filter((q) => q.status === "approved")
-                    .reduce((acc, q) => acc + q.total, 0),
-                )}
-              </p>
-            </CardContent>
-          </Card>
+          <Button
+            onClick={openCreate}
+            className="
+              h-10
+              bg-gradient-to-r
+              from-[#071124]
+              to-[#0d1a35]
+              text-white
+              shadow-lg
+              shadow-black/30
+              ring-1
+              ring-white/10
+              transition-all
+              duration-300
+              hover:shadow-[0_8px_30px_rgba(var(--accent-rgb),0.20)]
+              hover:ring-[rgba(var(--accent-rgb),0.30)]
+            "
+          >
+            <Plus className="h-4 w-4" />
+            Novo Orçamento
+          </Button>
         </div>
 
-        <Card className="border border-white/10 bg-white/[0.03] backdrop-blur-2xl shadow-2xl shadow-black/40">
-          <CardHeader>
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:gap-4">
-                <div className="relative w-full flex-1 sm:max-w-xs">
-                  <Input
+        {/* STATS */}
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-xl">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium uppercase tracking-wider text-white/35">
+                Total
+              </span>
+
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[rgba(var(--accent-rgb),0.08)]">
+                <FileText className="h-4 w-4 text-[var(--accent)]" />
+              </div>
+            </div>
+
+            <p className="mt-3 text-2xl font-semibold text-white">
+              {totalQuotes}
+            </p>
+
+            <p className="mt-1 text-xs text-white/30">
+              orçamentos cadastrados
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-xl">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium uppercase tracking-wider text-white/35">
+                Rascunhos
+              </span>
+
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.04]">
+                <Clock3 className="h-4 w-4 text-white/40" />
+              </div>
+            </div>
+
+            <p className="mt-3 text-2xl font-semibold text-white">
+              {draftQuotes}
+            </p>
+
+            <p className="mt-1 text-xs text-white/30">
+              aguardando envio
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-xl">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium uppercase tracking-wider text-white/35">
+                Enviados
+              </span>
+
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.04]">
+                <Send className="h-4 w-4 text-white/40" />
+              </div>
+            </div>
+
+            <p className="mt-3 text-2xl font-semibold text-white">
+              {sentQuotes}
+            </p>
+
+            <p className="mt-1 text-xs text-white/30">
+              aguardando retorno
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-xl">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium uppercase tracking-wider text-white/35">
+                Aprovados
+              </span>
+
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10">
+                <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+              </div>
+            </div>
+
+            <p className="mt-3 text-2xl font-semibold text-white">
+              {approvedQuotes}
+            </p>
+
+            <p className="mt-1 text-xs text-white/30">
+              propostas aprovadas
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-xl">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium uppercase tracking-wider text-white/35">
+                Valor aprovado
+              </span>
+
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[rgba(var(--accent-rgb),0.08)]">
+                <CheckCircle2 className="h-4 w-4 text-[var(--accent)]" />
+              </div>
+            </div>
+
+            <p className="mt-3 truncate text-xl font-semibold text-white">
+              {formatCurrency(approvedValue)}
+            </p>
+
+            <p className="mt-1 text-xs text-white/30">
+              total aprovado
+            </p>
+          </div>
+        </div>
+
+        {/* LISTA */}
+        <Card className="overflow-hidden border border-white/10 bg-white/[0.03] shadow-2xl shadow-black/40 backdrop-blur-2xl">
+          <CardHeader className="border-b border-white/5 p-4 sm:p-5">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <h2 className="text-sm font-semibold text-white">
+                  Lista de orçamentos
+                </h2>
+
+                <p className="mt-1 text-xs text-white/35">
+                  Consulte, edite, exporte ou acompanhe suas propostas.
+                </p>
+              </div>
+
+              <div className="flex w-full flex-col gap-3 sm:flex-row lg:w-auto">
+                <div className="relative w-full sm:w-72">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
+
+                  <input
                     type="text"
-                    placeholder="Buscar clientes..."
+                    placeholder="Buscar cliente, produto ou número..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    icon={<Search className="h-4 w-4" />}
-                    className="h-11 border-white/10 bg-white/5 text-white placeholder:text-white/30 focus:border-[var(--accent)]/50 focus:ring-[var(--accent)]/20"
+                    className="
+                      h-10
+                      w-full
+                      rounded-xl
+                      border
+                      border-white/10
+                      bg-white/[0.04]
+                      py-2
+                      pl-10
+                      pr-4
+                      text-sm
+                      text-white
+                      outline-none
+                      placeholder:text-white/25
+                      transition-all
+                      focus:border-[rgba(var(--accent-rgb),0.45)]
+                      focus:bg-white/[0.06]
+                      focus:ring-1
+                      focus:ring-[rgba(var(--accent-rgb),0.12)]
+                    "
                   />
                 </div>
 
@@ -653,68 +833,70 @@ export default function QuotesPage() {
                   options={[
                     {
                       value: "all",
-                      label: "Todos Status",
+                      label: "Todos os status",
                     },
                     ...quoteStatuses,
                   ]}
                   value={statusFilter}
-                  className="w-full border-white/10 bg-white/5 text-white focus:border-[var(--accent)]/50 focus:ring-[var(--accent)]/20 sm:w-44"
                   onChange={(e) => setStatusFilter(e.target.value)}
+                  className="
+                    h-10
+                    w-full
+                    border-white/10
+                    bg-white/[0.04]
+                    text-white
+                    focus:border-[rgba(var(--accent-rgb),0.45)]
+                    focus:ring-[rgba(var(--accent-rgb),0.15)]
+                    sm:w-44
+                  "
                 />
               </div>
-
-              <Button
-                onClick={openCreate}
-                className="bg-gradient-to-r from-[#071124] to-[#0d1a35] text-white shadow-lg shadow-black/30 ring-1 ring-white/10 transition-all duration-300 hover:shadow-[0_8px_30px_rgba(var(--accent-rgb),0.20)] hover:ring-[rgba(var(--accent-rgb),0.30)]"
-              >
-                <Plus className="h-4 w-4" />
-                Novo Orçamento
-              </Button>
             </div>
           </CardHeader>
 
           <CardContent className="p-0">
-            <div className="hidden md:block">
+            {/* DESKTOP */}
+            <div className="hidden overflow-x-auto md:block">
               <Table>
-                <TableHead>
+                <TableHead className="border-b border-white/10">
                   <TableRow>
-                    <TableHeadCell className="text-center text-white/50">
+                    <TableHeadCell className="text-left text-white/40">
                       Orçamento
                     </TableHeadCell>
 
-                    <TableHeadCell className="text-center text-white/50">
+                    <TableHeadCell className="text-left text-white/40">
                       Produto
                     </TableHeadCell>
 
-                    <TableHeadCell className="text-center text-white/50">
+                    <TableHeadCell className="text-left text-white/40">
                       Cliente
                     </TableHeadCell>
 
-                    <TableHeadCell className="text-center text-white/50">
+                    <TableHeadCell className="text-center text-white/40">
                       Itens
                     </TableHeadCell>
 
-                    <TableHeadCell className="text-center text-white/50">
+                    <TableHeadCell className="text-right text-white/40">
                       Subtotal
                     </TableHeadCell>
 
-                    <TableHeadCell className="text-center text-white/50">
+                    <TableHeadCell className="text-right text-white/40">
                       Total
                     </TableHeadCell>
 
-                    <TableHeadCell className="text-center text-white/50">
+                    <TableHeadCell className="text-center text-white/40">
                       Status
                     </TableHeadCell>
 
-                    <TableHeadCell className="text-center text-white/50">
+                    <TableHeadCell className="text-center text-white/40">
                       Validade
                     </TableHeadCell>
 
-                    <TableHeadCell className="text-center text-white/50">
+                    <TableHeadCell className="text-center text-white/40">
                       Criação
                     </TableHeadCell>
 
-                    <TableHeadCell className="text-center text-white/50">
+                    <TableHeadCell className="text-right text-white/40">
                       Ações
                     </TableHeadCell>
                   </TableRow>
@@ -722,50 +904,90 @@ export default function QuotesPage() {
 
                 <TableBody>
                   {filtered.map((quote) => (
-                    <TableRow key={quote.id}>
-                      <TableCell className="text-center font-mono text-xs font-medium">
-                        #{quote.quoteNumber ?? quote.id}
+                    <TableRow
+                      key={quote.id}
+                      className="
+                        border-b
+                        border-white/5
+                        transition-colors
+                        hover:bg-white/[0.025]
+                        last:border-0
+                      "
+                    >
+                      <TableCell>
+                        <div>
+                          <p className="font-mono text-xs font-semibold text-white">
+                            #{quote.quoteNumber ?? quote.id}
+                          </p>
+
+                          <p className="mt-1 text-[10px] uppercase tracking-wider text-white/25">
+                            Proposta
+                          </p>
+                        </div>
                       </TableCell>
 
-                      <TableCell className="text-center text-xs">
-                        {quote.productName || "—"}
+                      <TableCell>
+                        <span className="block max-w-[170px] truncate text-sm text-white/65">
+                          {quote.productName || "—"}
+                        </span>
+                      </TableCell>
+
+                      <TableCell>
+                        <span className="block max-w-[170px] truncate text-sm text-white/75">
+                          {quote.clientName}
+                        </span>
                       </TableCell>
 
                       <TableCell className="text-center">
-                        {quote.clientName}
+                        <span className="rounded-lg border border-white/10 bg-white/[0.03] px-2 py-1 text-[11px] text-white/50">
+                          {quote.items.length}
+                        </span>
                       </TableCell>
 
-                      <TableCell className="text-center text-xs">
-                        {quote.items.length} item(ns)
-                      </TableCell>
-
-                      <TableCell className="text-center">
+                      <TableCell className="text-right text-sm text-white/50">
                         {formatCurrency(quote.subtotal)}
                       </TableCell>
 
-                      <TableCell className="text-center font-medium">
-                        {formatCurrency(quote.total)}
+                      <TableCell className="text-right">
+                        <span className="text-sm font-semibold text-white">
+                          {formatCurrency(quote.total)}
+                        </span>
                       </TableCell>
 
                       <TableCell className="text-center">
                         <StatusBadge status={quote.status} />
                       </TableCell>
 
-                      <TableCell className="text-center text-xs">
+                      <TableCell className="text-center text-xs text-white/45">
                         {formatDate(quote.validUntil)}
                       </TableCell>
 
-                      <TableCell className="text-center text-xs">
+                      <TableCell className="text-center text-xs text-white/35">
                         {formatDate(quote.createdAt)}
                       </TableCell>
 
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1.5">
+                      <TableCell>
+                        <div className="flex justify-end gap-1.5">
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => generatePDF(quote)}
-                            className="h-10 w-10 rounded-lg border border-white/10 bg-white/[0.03] text-white/60 transition-all duration-200 hover:border-[var(--accent)]/40 hover:accent-bg hover:accent-text"
+                            
+                            className="
+                              h-9
+                              w-9
+                              rounded-lg
+                              border
+                              border-white/10
+                              bg-white/[0.03]
+                              p-0
+                              text-white/50
+                              transition-all
+                              duration-200
+                              hover:border-[rgba(var(--accent-rgb),0.35)]
+                              hover:bg-[rgba(var(--accent-rgb),0.08)]
+                              hover:text-[var(--accent)]
+                            "
                           >
                             <FileDown className="h-4 w-4" />
                           </Button>
@@ -774,7 +996,22 @@ export default function QuotesPage() {
                             variant="ghost"
                             size="sm"
                             onClick={() => openEdit(quote)}
-                            className="h-10 w-10 rounded-lg border border-white/10 bg-white/[0.03] text-white/60 transition-all duration-200 hover:border-[var(--accent)]/40 hover:accent-bg hover:accent-text"
+                            
+                            className="
+                              h-9
+                              w-9
+                              rounded-lg
+                              border
+                              border-white/10
+                              bg-white/[0.03]
+                              p-0
+                              text-white/50
+                              transition-all
+                              duration-200
+                              hover:border-[rgba(var(--accent-rgb),0.35)]
+                              hover:bg-[rgba(var(--accent-rgb),0.08)]
+                              hover:text-[var(--accent)]
+                            "
                           >
                             <Pencil className="h-4 w-4" />
                           </Button>
@@ -783,7 +1020,22 @@ export default function QuotesPage() {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleDelete(quote.id)}
-                            className="h-10 w-10 rounded-lg border border-white/10 bg-white/[0.03] text-white/60 transition-all duration-200 hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-400"
+                            
+                            className="
+                              h-9
+                              w-9
+                              rounded-lg
+                              border
+                              border-white/10
+                              bg-white/[0.03]
+                              p-0
+                              text-white/50
+                              transition-all
+                              duration-200
+                              hover:border-red-500/40
+                              hover:bg-red-500/10
+                              hover:text-red-400
+                            "
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -795,8 +1047,19 @@ export default function QuotesPage() {
                   {filtered.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={10}>
-                        <div className="py-8 text-center text-sm text-gray-500">
-                          Nenhum orçamento encontrado
+                        <div className="py-14 text-center">
+                          <FileText className="mx-auto h-8 w-8 text-white/15" />
+
+                          <p className="mt-3 text-sm text-white/40">
+                            Nenhum orçamento encontrado
+                          </p>
+
+                          {search && (
+                            <p className="mt-1 text-xs text-white/25">
+                              Tente buscar por outro cliente, produto ou
+                              número.
+                            </p>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -805,16 +1068,26 @@ export default function QuotesPage() {
               </Table>
             </div>
 
+            {/* MOBILE */}
             <div className="space-y-3 p-4 md:hidden">
               {filtered.map((quote) => (
                 <div
                   key={quote.id}
-                  className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 shadow-lg shadow-black/20 backdrop-blur-2xl"
+                  className="
+                    rounded-2xl
+                    border
+                    border-white/10
+                    bg-white/[0.025]
+                    p-4
+                    shadow-lg
+                    shadow-black/20
+                    backdrop-blur-xl
+                  "
                 >
                   <div className="space-y-4">
                     <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-[11px] font-medium uppercase tracking-wider text-white/35">
+                      <div>
+                        <p className="text-[10px] font-medium uppercase tracking-wider text-white/30">
                           Orçamento
                         </p>
 
@@ -823,13 +1096,11 @@ export default function QuotesPage() {
                         </p>
                       </div>
 
-                      <div className="shrink-0">
-                        <StatusBadge status={quote.status} />
-                      </div>
+                      <StatusBadge status={quote.status} />
                     </div>
 
                     <div>
-                      <p className="text-[11px] font-medium uppercase tracking-wider text-white/35">
+                      <p className="text-[10px] font-medium uppercase tracking-wider text-white/30">
                         Cliente
                       </p>
 
@@ -839,19 +1110,19 @@ export default function QuotesPage() {
                     </div>
 
                     <div>
-                      <p className="text-[11px] font-medium uppercase tracking-wider text-white/35">
+                      <p className="text-[10px] font-medium uppercase tracking-wider text-white/30">
                         Produto
                       </p>
 
-                      <p className="mt-1 text-sm text-white/70">
+                      <p className="mt-1 text-sm text-white/65">
                         {quote.productName || "—"}
                       </p>
                     </div>
 
-                    <div className="rounded-xl border border-white/10 px-4 py-3">
+                    <div className="rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3">
                       <div className="flex items-center justify-between gap-4">
                         <div>
-                          <p className="text-[11px] font-medium uppercase tracking-wider text-white/35">
+                          <p className="text-[10px] font-medium uppercase tracking-wider text-white/30">
                             Total
                           </p>
 
@@ -861,20 +1132,30 @@ export default function QuotesPage() {
                         </div>
 
                         <div className="text-right">
-                          <p className="text-[11px] font-medium uppercase tracking-wider text-white/35">
+                          <p className="text-[10px] font-medium uppercase tracking-wider text-white/30">
                             Subtotal
                           </p>
 
-                          <p className="mt-1 text-sm text-white/60">
+                          <p className="mt-1 text-sm text-white/50">
                             {formatCurrency(quote.subtotal)}
                           </p>
                         </div>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-3 gap-3">
                       <div>
-                        <p className="text-[11px] font-medium uppercase tracking-wider text-white/35">
+                        <p className="text-[10px] font-medium uppercase tracking-wider text-white/30">
+                          Itens
+                        </p>
+
+                        <p className="mt-1 text-sm text-white/60">
+                          {quote.items.length}
+                        </p>
+                      </div>
+
+                      <div>
+                        <p className="text-[10px] font-medium uppercase tracking-wider text-white/30">
                           Validade
                         </p>
 
@@ -884,7 +1165,7 @@ export default function QuotesPage() {
                       </div>
 
                       <div>
-                        <p className="text-[11px] font-medium uppercase tracking-wider text-white/35">
+                        <p className="text-[10px] font-medium uppercase tracking-wider text-white/30">
                           Criação
                         </p>
 
@@ -894,43 +1175,71 @@ export default function QuotesPage() {
                       </div>
                     </div>
 
-                    <div className="border-t border-white/5 pt-3">
-                      <p className="text-[11px] font-medium uppercase tracking-wider text-white/35">
-                        Itens
-                      </p>
-
-                      <p className="mt-1 text-sm text-white/60">
-                        {quote.items.length}{" "}
-                        {quote.items.length === 1 ? "item" : "itens"}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center gap-2 border-t border-white/10 pt-3">
+                    <div className="flex items-center gap-2 border-t border-white/5 pt-3">
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => generatePDF(quote)}
-                        className="h-10 flex-1 rounded-xl border border-white/10 bg-transparent text-white/60 transition-all duration-200 hover:border-[var(--accent)]/40 hover:accent-bg hover:accent-text"
+                        className="
+                          h-10
+                          flex-1
+                          rounded-xl
+                          border
+                          border-white/10
+                          bg-white/[0.03]
+                          text-white/50
+                          transition-all
+                          hover:border-[rgba(var(--accent-rgb),0.35)]
+                          hover:bg-[rgba(var(--accent-rgb),0.08)]
+                          hover:text-[var(--accent)]
+                        "
                       >
-                        <FileDown className="mr-1 h-4 w-4" />
+                        <FileDown className="h-4 w-4" />
+                        <span className="ml-2 text-xs">PDF</span>
                       </Button>
 
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => openEdit(quote)}
-                        className="h-10 flex-1 rounded-xl border border-white/10 bg-transparent text-white/60 transition-all duration-200 hover:border-[var(--accent)]/40 hover:accent-bg hover:accent-text"
+                        className="
+                          h-10
+                          flex-1
+                          rounded-xl
+                          border
+                          border-white/10
+                          bg-white/[0.03]
+                          text-white/50
+                          transition-all
+                          hover:border-[rgba(var(--accent-rgb),0.35)]
+                          hover:bg-[rgba(var(--accent-rgb),0.08)]
+                          hover:text-[var(--accent)]
+                        "
                       >
-                        <Pencil className="mr-2 h-4 w-4" />
+                        <Pencil className="h-4 w-4" />
+                        <span className="ml-2 text-xs">Editar</span>
                       </Button>
 
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => handleDelete(quote.id)}
-                        className="h-10 flex-1 rounded-xl border border-white/10 bg-transparent text-white/60 transition-all duration-200 hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-400"
+                        className="
+                          h-10
+                          w-10
+                          rounded-xl
+                          border
+                          border-white/10
+                          bg-white/[0.03]
+                          p-0
+                          text-white/50
+                          transition-all
+                          hover:border-red-500/40
+                          hover:bg-red-500/10
+                          hover:text-red-400
+                        "
                       >
-                        <Trash2 className="mr-2 h-4 w-4" />
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
@@ -938,8 +1247,12 @@ export default function QuotesPage() {
               ))}
 
               {filtered.length === 0 && (
-                <div className="py-8 text-center text-sm text-white/40">
-                  Nenhum orçamento encontrado
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-12 text-center">
+                  <FileText className="mx-auto h-8 w-8 text-white/15" />
+
+                  <p className="mt-3 text-sm text-white/40">
+                    Nenhum orçamento encontrado
+                  </p>
                 </div>
               )}
             </div>
@@ -947,99 +1260,196 @@ export default function QuotesPage() {
         </Card>
       </div>
 
+      {/* MODAL */}
       <Modal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         title={editingQuote ? "Editar Orçamento" : "Novo Orçamento"}
         size="xl"
+        className="border border-white/10 bg-[#0a1120]/95 text-white backdrop-blur-2xl"
       >
         <form onSubmit={handleSave}>
-          <div className="grid gap-8 lg:grid-cols-[1fr_420px]">
-            <div className="space-y-3">
-              <Input
-  id="product"
-  label="Produto"
-  placeholder="Digite o nome do produto"
-  value={form.productName}
-  onChange={(e) => {
-    setForm((prev) => ({
-      ...prev,
-      productName: e.target.value,
-    }));
+          <div className="grid gap-6 lg:grid-cols-[1fr_420px]">
+            {/* ESQUERDA */}
+            <div className="space-y-6">
+              {/* INFORMAÇÕES */}
+              <div>
+                <div className="mb-3">
+                  <h3 className="text-sm font-semibold text-white">
+                    Informações do orçamento
+                  </h3>
 
-    if (e.target.value.trim()) {
-      setErrors((prev) => ({
-        ...prev,
-        product: "",
-      }));
-    }
-  }}
-  error={errors.product}
-  required
-/>
+                  <p className="mt-1 text-xs text-white/30">
+                    Defina o cliente, produto e validade da proposta.
+                  </p>
+                </div>
 
-              <Input
-  id="client"
-  label="Cliente"
-  placeholder="Digite o nome do cliente"
-  value={form.clientName}
-  onChange={(e) => {
-    setForm((prev) => ({
-      ...prev,
-      clientName: e.target.value,
-    }));
+                <div className="space-y-4">
+                  <Input
+                    id="product"
+                    label="Produto"
+                    placeholder="Digite o nome do produto"
+                    value={form.productName}
+                    onChange={(e) => {
+                      setForm((prev) => ({
+                        ...prev,
+                        productName: e.target.value,
+                      }));
 
-    if (e.target.value.trim()) {
-      setErrors((prev) => ({
-        ...prev,
-        client: "",
-      }));
-    }
-  }}
-  error={errors.client}
-  required
-/>
+                      if (e.target.value.trim()) {
+                        setErrors((prev) => ({
+                          ...prev,
+                          product: "",
+                        }));
+                      }
+                    }}
+                    error={errors.product}
+                    required
+                    className="
+                      border-white/10
+                      bg-white/[0.04]
+                      text-white
+                      placeholder:text-white/25
+                      focus:border-[rgba(var(--accent-rgb),0.45)]
+                      focus:ring-[rgba(var(--accent-rgb),0.15)]
+                    "
+                  />
 
-<Input
-  id="validUntil"
-  label="Validade"
-  type="date"
-  value={form.validUntil}
-  onChange={(e) =>
-    setForm((prev) => ({
-      ...prev,
-      validUntil: e.target.value,
-    }))
-  }
-  required
-/>
+                  <Input
+                    id="client"
+                    label="Cliente"
+                    placeholder="Digite o nome do cliente"
+                    value={form.clientName}
+                    onChange={(e) => {
+                      setForm((prev) => ({
+                        ...prev,
+                        clientName: e.target.value,
+                      }));
 
-              <Input
-                id="notes"
-                label="Observações"
-                value={form.notes}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    notes: e.target.value,
-                  })
-                }
-                className="border-white/10 bg-white/5 text-white"
-              />
-            </div>
+                      if (e.target.value.trim()) {
+                        setErrors((prev) => ({
+                          ...prev,
+                          client: "",
+                        }));
+                      }
+                    }}
+                    error={errors.client}
+                    required
+                    className="
+                      border-white/10
+                      bg-white/[0.04]
+                      text-white
+                      placeholder:text-white/25
+                      focus:border-[rgba(var(--accent-rgb),0.45)]
+                      focus:ring-[rgba(var(--accent-rgb),0.15)]
+                    "
+                  />
 
-            <div className="flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]">
-              <div className="border-b border-white/10 px-6 py-5">
-                <h3 className="text-lg font-semibold text-white">
-                  Itens do orçamento
-                </h3>
+                  <Input
+                    id="validUntil"
+                    label="Validade"
+                    type="date"
+                    value={form.validUntil}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        validUntil: e.target.value,
+                      }))
+                    }
+                    required
+                    className="
+                      border-white/10
+                      bg-white/[0.04]
+                      text-white
+                      focus:border-[rgba(var(--accent-rgb),0.45)]
+                      focus:ring-[rgba(var(--accent-rgb),0.15)]
+                    "
+                  />
+
+                  <Input
+                    id="notes"
+                    label="Observações"
+                    placeholder="Informações adicionais para o cliente..."
+                    value={form.notes}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        notes: e.target.value,
+                      })
+                    }
+                    className="
+                      border-white/10
+                      bg-white/[0.04]
+                      text-white
+                      placeholder:text-white/25
+                      focus:border-[rgba(var(--accent-rgb),0.45)]
+                      focus:ring-[rgba(var(--accent-rgb),0.15)]
+                    "
+                  />
+                </div>
               </div>
 
-              <div className="flex-1 space-y-5 p-6">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              {/* STATUS */}
+              <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-4">
+                <div className="mb-3">
+                  <h3 className="text-sm font-semibold text-white">
+                    Status
+                  </h3>
+
+                  <p className="mt-1 text-xs text-white/30">
+                    Defina em qual etapa está esta proposta.
+                  </p>
+                </div>
+
+                <Select
+                  options={quoteStatuses}
+                  value={form.status}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      status: e.target.value as Quote["status"],
+                    }))
+                  }
+                  className="
+                    border-white/10
+                    bg-white/[0.04]
+                    text-white
+                    focus:border-[rgba(var(--accent-rgb),0.45)]
+                    focus:ring-[rgba(var(--accent-rgb),0.15)]
+                  "
+                />
+              </div>
+            </div>
+
+            {/* DIREITA */}
+            <div className="flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/[0.025]">
+              {/* HEADER ITENS */}
+              <div className="border-b border-white/10 px-5 py-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-semibold text-white">
+                      Itens do orçamento
+                    </h3>
+
+                    <p className="mt-1 text-xs text-white/30">
+                      Adicione os itens e seus valores.
+                    </p>
+                  </div>
+
+                  <span className="rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] font-medium text-white/40">
+                    {form.items.length}{" "}
+                    {form.items.length === 1 ? "item" : "itens"}
+                  </span>
+                </div>
+              </div>
+
+              {/* ADICIONAR ITEM */}
+              <div className="border-b border-white/10 p-5">
+                <div className="grid grid-cols-2 gap-3">
                   <Input
                     label="Quantidade"
                     type="number"
+                    min="1"
                     placeholder="1"
                     value={itemForm.quantity}
                     onChange={(e) =>
@@ -1048,13 +1458,19 @@ export default function QuotesPage() {
                         quantity: e.target.value,
                       })
                     }
-                    className="w-full border-white/10 bg-white/5 text-white sm:w-20"
+                    className="
+                      border-white/10
+                      bg-white/[0.04]
+                      text-white
+                      placeholder:text-white/25
+                    "
                   />
 
                   <Input
-                    label="Valor Unit."
+                    label="Valor unitário"
                     type="number"
                     step="0.01"
+                    min="0"
                     placeholder="0,00"
                     value={itemForm.unitPrice}
                     onChange={(e) =>
@@ -1063,62 +1479,110 @@ export default function QuotesPage() {
                         unitPrice: e.target.value,
                       })
                     }
-                    className="w-full border-white/10 bg-white/5 text-white sm:w-28"
+                    className="
+                      border-white/10
+                      bg-white/[0.04]
+                      text-white
+                      placeholder:text-white/25
+                    "
                   />
-
-                  <Button
-                    type="button"
-                    onClick={addItem}
-                    className="h-9 whitespace-nowrap px-6 accent-bg hover:bg-[#ff7b24]"
-                  >
-                    Adicionar Item
-                  </Button>
                 </div>
 
-                <div className="max-h-72 space-y-3 overflow-y-auto">
-                  {form.items.map((item, idx) => (
-                    <div
-                      key={idx}
-                      className="rounded-xl border border-white/10 bg-[#071124] p-4"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <p className="font-medium text-white">
-                            {item.description}
-                          </p>
-
-                          <p className="mt-1 text-sm text-white/50">
-                            {item.quantity} ×{" "}
-                            {formatCurrency(Number(item.unitPrice))}
-                          </p>
-                        </div>
-
-                        <div className="flex items-center gap-4">
-                          <span className="font-semibold text-white">
-                            {formatCurrency(
-                              Number(item.quantity) * Number(item.unitPrice),
-                            )}
-                          </span>
-
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            type="button"
-                            onClick={() => removeItem(idx)}
-                          >
-                            <Trash2 className="h-4 w-4 text-red-400" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <Button
+                  type="button"
+                  onClick={addItem}
+                  className="
+                    mt-3
+                    h-9
+                    w-full
+                    bg-[var(--accent)]
+                    text-white
+                    shadow-lg
+                    shadow-orange-950/20
+                    hover:bg-[#ff7b24]
+                  "
+                >
+                  <Plus className="h-4 w-4" />
+                  Adicionar item
+                </Button>
               </div>
 
-              {/* RESUMO FINANCEIRO */}
-              <div className="border-t border-white/10 bg-white/[0.03] px-6 py-5">
+              {/* LISTA */}
+              <div className="max-h-72 flex-1 space-y-3 overflow-y-auto p-5">
+                {form.items.length === 0 && (
+                  <div className="flex min-h-36 flex-col items-center justify-center rounded-xl border border-dashed border-white/10 bg-white/[0.015] px-4 text-center">
+                    <FileText className="h-7 w-7 text-white/15" />
+
+                    <p className="mt-2 text-xs text-white/35">
+                      Nenhum item adicionado
+                    </p>
+
+                    <p className="mt-1 text-[11px] text-white/20">
+                      Adicione pelo menos um item ao orçamento.
+                    </p>
+                  </div>
+                )}
+
+                {form.items.map((item, idx) => (
+                  <div
+                    key={idx}
+                    className="
+                      rounded-xl
+                      border
+                      border-white/10
+                      bg-[#071124]
+                      p-3
+                      transition-colors
+                      hover:border-white/15
+                    "
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-white">
+                          {item.description}
+                        </p>
+
+                        <p className="mt-1 text-xs text-white/35">
+                          {item.quantity} ×{" "}
+                          {formatCurrency(Number(item.unitPrice))}
+                        </p>
+                      </div>
+
+                      <div className="flex shrink-0 items-center gap-2">
+                        <span className="text-sm font-semibold text-white">
+                          {formatCurrency(
+                            Number(item.quantity) *
+                              Number(item.unitPrice),
+                          )}
+                        </span>
+
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          type="button"
+                          onClick={() => removeItem(idx)}
+                          className="
+                            h-8
+                            w-8
+                            rounded-lg
+                            p-0
+                            text-white/30
+                            hover:bg-red-500/10
+                            hover:text-red-400
+                          "
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* RESUMO */}
+              <div className="border-t border-white/10 bg-white/[0.02] p-5">
                 <div className="space-y-3">
-                  <div className="flex justify-between text-white/60">
+                  <div className="flex justify-between text-white/50">
                     <span className="text-xs">Subtotal</span>
 
                     <span className="text-xs">
@@ -1126,17 +1590,16 @@ export default function QuotesPage() {
                     </span>
                   </div>
 
-
                   {/* DESCONTO PIX */}
                   <div className="rounded-xl border border-white/10 bg-white/[0.025] p-3">
-                    <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center justify-between gap-3">
                       <div>
                         <p className="text-xs font-medium text-white">
                           Desconto PIX
                         </p>
 
-                        <p className="mt-0.5 text-[11px] text-white/35">
-                          Escolha o percentual para pagamento à vista
+                        <p className="mt-0.5 text-[10px] text-white/30">
+                          Percentual para pagamento à vista
                         </p>
                       </div>
 
@@ -1151,26 +1614,39 @@ export default function QuotesPage() {
                           onChange={(e) => {
                             const value = e.target.value;
 
-                            if (value === "" || Number(value) <= 100) {
+                            if (
+                              value === "" ||
+                              Number(value) <= 100
+                            ) {
                               setForm({
                                 ...form,
                                 discountPercent: value,
                               });
                             }
                           }}
-                          className="h-9 w-20 border-white/10 bg-white/5 px-3 text-center text-sm text-white"
+                          className="
+                            h-9
+                            w-20
+                            border-white/10
+                            bg-white/[0.04]
+                            px-2
+                            text-center
+                            text-sm
+                            text-white
+                          "
                         />
 
-                        <span className="text-sm text-white/50">%</span>
+                        <span className="text-sm text-white/40">
+                          %
+                        </span>
                       </div>
                     </div>
                   </div>
 
                   {calcDiscountPercent() > 0 && (
-                    <div className="flex justify-between text-white/60">
+                    <div className="flex justify-between text-white/50">
                       <span className="text-xs">
-                        Desconto ({calcDiscountPercent()}
-                        %)
+                        Desconto ({calcDiscountPercent()}%)
                       </span>
 
                       <span className="text-xs text-red-400">
@@ -1181,26 +1657,32 @@ export default function QuotesPage() {
 
                   <div className="h-px bg-white/10" />
 
-                  <div className="flex justify-between text-xl font-bold text-white">
-                    <span>Total</span>
+                  <div className="flex items-end justify-between gap-4">
+                    <div>
+                      <p className="text-[10px] font-medium uppercase tracking-wider text-white/30">
+                        Total
+                      </p>
 
-                    <span>{formatCurrency(calcTotal())}</span>
+                      <p className="mt-1 text-2xl font-bold text-white">
+                        {formatCurrency(calcTotal())}
+                      </p>
+                    </div>
                   </div>
 
                   {calcDiscountPercent() > 0 && (
-                    <div className="mt-2 rounded-xl border border-[var(--accent)]/30 bg-[var(--accent)]/5 px-4 py-3">
+                    <div className="rounded-xl border border-[rgba(var(--accent-rgb),0.25)] bg-[rgba(var(--accent-rgb),0.05)] px-4 py-3">
                       <div className="flex items-center justify-between gap-4">
                         <div>
-                          <p className="text-xs font-medium uppercase tracking-wider text-[var(--accent)]">
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
                             Total no PIX
                           </p>
 
-                          <p className="mt-0.5 text-[11px] text-white/40">
+                          <p className="mt-0.5 text-[10px] text-white/30">
                             Pagamento à vista
                           </p>
                         </div>
 
-                        <span className="text-xl font-bold text-[var(--accent)]">
+                        <span className="text-lg font-bold text-[var(--accent)]">
                           {formatCurrency(calcPixTotal())}
                         </span>
                       </div>
@@ -1211,12 +1693,21 @@ export default function QuotesPage() {
             </div>
           </div>
 
-          <div className="mt-8 flex flex-col gap-3 border-t border-white/10 pt-6 sm:flex-row sm:justify-between">
+          {/* FOOTER */}
+          <div className="mt-6 flex flex-col gap-3 border-t border-white/10 pt-5 sm:flex-row sm:items-center sm:justify-between">
             <Button
               type="button"
               variant="secondary"
               onClick={generatePDF}
-              className="border-white/10 bg-white/5 text-white hover:bg-white/10"
+              className="
+                border-white/10
+                bg-white/[0.04]
+                text-white/60
+                ring-1
+                ring-white/5
+                hover:bg-white/[0.08]
+                hover:text-white
+              "
             >
               <FileDown className="mr-2 h-4 w-4" />
               Gerar PDF
@@ -1227,16 +1718,36 @@ export default function QuotesPage() {
                 type="button"
                 variant="secondary"
                 onClick={() => setModalOpen(false)}
-                className="border-white/10 bg-white/5 text-white hover:bg-white/10"
+                className="
+                  border-white/10
+                  bg-white/[0.04]
+                  text-white/60
+                  ring-1
+                  ring-white/5
+                  hover:bg-white/[0.08]
+                  hover:text-white
+                "
               >
                 Cancelar
               </Button>
 
               <Button
                 type="submit"
-                className="bg-gradient-to-r from-[#071124] to-[#0d1a35] text-white ring-1 ring-white/10 hover:ring-[var(--accent)]/30"
+                className="
+                  bg-gradient-to-r
+                  from-[#071124]
+                  to-[#0d1a35]
+                  text-white
+                  shadow-lg
+                  shadow-black/20
+                  ring-1
+                  ring-white/10
+                  hover:ring-[rgba(var(--accent-rgb),0.35)]
+                "
               >
-                {editingQuote ? "Salvar" : "Criar Orçamento"}
+                {editingQuote
+                  ? "Salvar alterações"
+                  : "Criar orçamento"}
               </Button>
             </div>
           </div>

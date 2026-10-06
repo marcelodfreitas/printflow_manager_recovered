@@ -19,6 +19,7 @@ export interface Client {
   phone: string;
   document: string;
   address: string;
+  cep?: string;
   createdAt: string;
 }
 
@@ -33,8 +34,10 @@ export interface Printer {
   buildVolume: string;
   lastMaintenance: string;
   imageUrl?: string;
+  isPrimary?: boolean;
   powerConsumption?: number;
   costPerHour: number;
+  purchasePrice?: number;
 }
 
 export interface Filament {
@@ -49,6 +52,8 @@ export interface Filament {
   quantity: number;
   costPerKg: number;
   remainingWeight?: number;
+  purchaseDate?: string,
+  purchaseStore?: string;
 }
 
 export interface Product {
