@@ -13,6 +13,8 @@ import {
   Package,
   Calculator,
   Boxes,
+  Layers,
+  ClipboardList,
   ShieldCheck,
   LogOut,
   X,
@@ -46,7 +48,7 @@ const navSections = [
       {
         href: "/filamentos",
         label: "Filamentos",
-        icon: Pentagon,
+        icon: Layers,
       },
       {
         href: "/calculos",
@@ -56,7 +58,12 @@ const navSections = [
       {
         href: "/pedidos",
         label: "Pedidos",
-        icon: Package,
+        icon: ClipboardList,
+      },
+      {
+        href: "/produtos",
+        label: "Produtos",
+        icon: Boxes,
       },
       {
   href: "/orcamentos",

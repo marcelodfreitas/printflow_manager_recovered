@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+
 import { jsPDF } from "jspdf";
 import {
   Plus,
@@ -12,7 +13,6 @@ import {
   Send,
   CheckCircle2,
   Clock3,
-  XCircle,
 } from "lucide-react";
 
 import logo from "@/assets/logo.png";
@@ -35,12 +35,7 @@ import { Badge } from "@/components/ui/Badge";
 import type { Quote, QuoteItem } from "@/types";
 import { useQuotes } from "@/hooks/useQuotes";
 import { useClients } from "@/hooks/useClients";
-import { useProducts } from "@/hooks/useProducts";
-import {
-  formatCurrency,
-  formatDate,
-  translateStatus,
-} from "@/lib/utils";
+import { formatCurrency, formatDate, translateStatus } from "@/lib/utils";
 
 interface QuoteFormItem {
   description: string;
@@ -91,7 +86,6 @@ function StatusBadge({ status }: { status: string }) {
 export default function QuotesPage() {
   const { quotes, loading, create, update, remove } = useQuotes();
   const { clients } = useClients();
-  const { products } = useProducts();
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -141,14 +135,18 @@ export default function QuotesPage() {
   const approvedQuotes = quotes.filter(
     (q) => q.status === "approved",
   ).length;
-  const rejectedQuotes = quotes.filter(
-    (q) => q.status === "rejected",
-  ).length;
 
   const approvedValue = quotes
     .filter((q) => q.status === "approved")
     .reduce((acc, q) => acc + Number(q.total ?? 0), 0);
 
+  /*
+   * NOVO ORÇAMENTO
+   *
+   * Importante:
+   * items começa SEMPRE como [].
+   * Não criamos um item vazio automaticamente.
+   */
   function openCreate() {
     setEditingQuote(null);
 
@@ -195,10 +193,10 @@ export default function QuotesPage() {
         quote.discountPercent > 0
           ? String(quote.discountPercent)
           : "",
-      items: quote.items.map((item) => ({
-        description: item.description,
-        quantity: String(item.quantity),
-        unitPrice: String(item.unitPrice),
+      items: (quote.items || []).map((item) => ({
+        description: item.description || "",
+        quantity: String(item.quantity ?? 1),
+        unitPrice: String(item.unitPrice ?? 0),
       })),
     });
 
@@ -217,7 +215,9 @@ export default function QuotesPage() {
   }
 
   function addItem() {
-    if (!form.productName.trim()) {
+    const productName = form.productName.trim();
+
+    if (!productName) {
       (
         document.getElementById("product") as HTMLInputElement | null
       )?.reportValidity();
@@ -225,16 +225,26 @@ export default function QuotesPage() {
       return;
     }
 
-    if (!itemForm.unitPrice) return;
+    const quantity = Number(itemForm.quantity);
+    const unitPrice = Number(itemForm.unitPrice);
+
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      return;
+    }
+
+    if (!Number.isFinite(unitPrice) || unitPrice <= 0) {
+      return;
+    }
 
     setForm((prev) => ({
       ...prev,
       items: [
         ...prev.items,
         {
-          description: prev.productName.trim(),
-          quantity: itemForm.quantity,
-          unitPrice: itemForm.unitPrice,
+          description:
+            itemForm.description.trim() || productName,
+          quantity: String(quantity),
+          unitPrice: String(unitPrice),
         },
       ],
     }));
@@ -255,7 +265,17 @@ export default function QuotesPage() {
 
   function calcSubtotal() {
     return form.items.reduce((acc, item) => {
-      return acc + Number(item.quantity) * Number(item.unitPrice);
+      const quantity = Number(item.quantity);
+      const unitPrice = Number(item.unitPrice);
+
+      if (
+        !Number.isFinite(quantity) ||
+        !Number.isFinite(unitPrice)
+      ) {
+        return acc;
+      }
+
+      return acc + quantity * unitPrice;
     }, 0);
   }
 
@@ -300,17 +320,45 @@ export default function QuotesPage() {
       return;
     }
 
-    const subtotal = calcSubtotal();
+    /*
+     * Remove qualquer item inválido antes de salvar.
+     *
+     * Isso também protege contra itens antigos contendo:
+     * quantity = ""
+     * unitPrice = ""
+     * ou valores NaN.
+     */
+    const validItems = form.items.filter((item) => {
+      const quantity = Number(item.quantity);
+      const unitPrice = Number(item.unitPrice);
+
+      return (
+        item.description.trim() &&
+        Number.isFinite(quantity) &&
+        quantity > 0 &&
+        Number.isFinite(unitPrice) &&
+        unitPrice > 0
+      );
+    });
+
+    const subtotal = validItems.reduce((acc, item) => {
+      return (
+        acc +
+        Number(item.quantity) * Number(item.unitPrice)
+      );
+    }, 0);
+
     const tax = subtotal * 0.1;
     const total = subtotal + tax;
     const discountPercent = calcDiscountPercent();
 
-    const items: QuoteItem[] = form.items.map((item, idx) => ({
+    const items: QuoteItem[] = validItems.map((item, idx) => ({
       id: String(idx),
-      description: item.description,
+      description: item.description.trim(),
       quantity: Number(item.quantity),
       unitPrice: Number(item.unitPrice),
-      total: Number(item.quantity) * Number(item.unitPrice),
+      total:
+        Number(item.quantity) * Number(item.unitPrice),
     }));
 
     if (editingQuote) {
@@ -365,7 +413,9 @@ export default function QuotesPage() {
       ? quote.clientName?.trim() || ""
       : form.clientName.trim();
 
-    const validUntil = quote ? quote.validUntil || "" : form.validUntil;
+    const validUntil = quote
+      ? quote.validUntil || ""
+      : form.validUntil;
 
     const status = quote ? quote.status : form.status;
 
@@ -385,7 +435,8 @@ export default function QuotesPage() {
       ? Number(quote.discountPercent ?? 0)
       : calcDiscountPercent();
 
-    const discountAmount = total * (discountPercent / 100);
+    const discountAmount =
+      total * (discountPercent / 100);
 
     const pixTotal = total - discountAmount;
 
@@ -398,7 +449,8 @@ export default function QuotesPage() {
       logoData = await new Promise<string>((resolve) => {
         const reader = new FileReader();
 
-        reader.onloadend = () => resolve(reader.result as string);
+        reader.onloadend = () =>
+          resolve(reader.result as string);
 
         reader.readAsDataURL(blob);
       });
@@ -413,14 +465,25 @@ export default function QuotesPage() {
     doc.rect(0, 27, 210, 1.2, "F");
 
     if (logoData) {
-      doc.addImage(logoData, "PNG", 14, 5, 17, 17);
+      doc.addImage(
+        logoData,
+        "PNG",
+        14,
+        5,
+        17,
+        17,
+      );
     }
 
     doc.setTextColor(255, 255, 255);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(16);
 
-    doc.text("PrintFlow", logoData ? 37 : 14, 14);
+    doc.text(
+      "PrintFlow",
+      logoData ? 37 : 14,
+      14,
+    );
 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
@@ -437,18 +500,28 @@ export default function QuotesPage() {
 
     doc.setTextColor(255, 255, 255);
 
-    doc.text(new Date().toLocaleDateString("pt-BR"), 194, 12, {
-      align: "right",
-    });
+    doc.text(
+      new Date().toLocaleDateString("pt-BR"),
+      194,
+      12,
+      {
+        align: "right",
+      },
+    );
 
     doc.setTextColor(180, 190, 205);
     doc.text("Status:", 150, 18);
 
     doc.setTextColor(255, 255, 255);
 
-    doc.text(translateStatus(status), 194, 18, {
-      align: "right",
-    });
+    doc.text(
+      translateStatus(status),
+      194,
+      18,
+      {
+        align: "right",
+      },
+    );
 
     let y = 40;
 
@@ -460,20 +533,34 @@ export default function QuotesPage() {
     doc.setFontSize(12);
     doc.setTextColor(20, 20, 20);
 
-    doc.text(clientName || "—", 14, y + 6);
+    doc.text(
+      clientName || "—",
+      14,
+      y + 6,
+    );
 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
     doc.setTextColor(120, 120, 120);
 
     if (validUntil) {
-      doc.text(`Validade: ${formatDate(validUntil)}`, 14, y + 12);
+      doc.text(
+        `Validade: ${formatDate(validUntil)}`,
+        14,
+        y + 12,
+      );
     }
 
     y += 24;
 
     doc.setFillColor(245, 245, 245);
-    doc.rect(14, y - 5, 182, 7, "F");
+    doc.rect(
+      14,
+      y - 5,
+      182,
+      7,
+      "F",
+    );
 
     doc.setFont("helvetica", "bold");
     doc.setFontSize(9);
@@ -499,22 +586,52 @@ export default function QuotesPage() {
     doc.setTextColor(40, 40, 40);
 
     items.forEach((item) => {
-      const itemTotal =
-        Number(item.quantity) * Number(item.unitPrice);
+      const quantity = Number(item.quantity);
+      const unitPrice = Number(item.unitPrice);
 
-      doc.text(item.description, 16, y);
+      if (
+        !Number.isFinite(quantity) ||
+        !Number.isFinite(unitPrice)
+      ) {
+        return;
+      }
 
-      doc.text(String(item.quantity), 124, y, {
-        align: "right",
-      });
+      const itemTotal = quantity * unitPrice;
 
-      doc.text(formatCurrency(Number(item.unitPrice)), 152, y, {
-        align: "right",
-      });
+      doc.text(
+        item.description?.trim() ||
+          productName ||
+          "Impressão 3D",
+        16,
+        y,
+      );
 
-      doc.text(formatCurrency(itemTotal), 194, y, {
-        align: "right",
-      });
+      doc.text(
+        String(quantity),
+        124,
+        y,
+        {
+          align: "right",
+        },
+      );
+
+      doc.text(
+        formatCurrency(unitPrice),
+        152,
+        y,
+        {
+          align: "right",
+        },
+      );
+
+      doc.text(
+        formatCurrency(itemTotal),
+        194,
+        y,
+        {
+          align: "right",
+        },
+      );
 
       y += 7;
     });
@@ -522,18 +639,33 @@ export default function QuotesPage() {
     y += 8;
 
     doc.setDrawColor(220, 220, 220);
-    doc.line(14, y - 4, 196, y - 4);
+    doc.line(
+      14,
+      y - 4,
+      196,
+      y - 4,
+    );
 
     doc.setFontSize(10);
     doc.setTextColor(60, 60, 60);
 
-    doc.text("Subtotal", 150, y, {
-      align: "right",
-    });
+    doc.text(
+      "Subtotal",
+      150,
+      y,
+      {
+        align: "right",
+      },
+    );
 
-    doc.text(formatCurrency(subtotal), 194, y, {
-      align: "right",
-    });
+    doc.text(
+      formatCurrency(subtotal),
+      194,
+      y,
+      {
+        align: "right",
+      },
+    );
 
     y += 8;
 
@@ -541,13 +673,23 @@ export default function QuotesPage() {
     doc.setFontSize(12);
     doc.setTextColor(253, 100, 1);
 
-    doc.text("Total", 150, y, {
-      align: "right",
-    });
+    doc.text(
+      "Total",
+      150,
+      y,
+      {
+        align: "right",
+      },
+    );
 
-    doc.text(formatCurrency(total), 194, y, {
-      align: "right",
-    });
+    doc.text(
+      formatCurrency(total),
+      194,
+      y,
+      {
+        align: "right",
+      },
+    );
 
     if (discountPercent > 0) {
       y += 7;
@@ -567,9 +709,14 @@ export default function QuotesPage() {
 
       doc.setTextColor(190, 60, 60);
 
-      doc.text(`- ${formatCurrency(discountAmount)}`, 194, y, {
-        align: "right",
-      });
+      doc.text(
+        `- ${formatCurrency(discountAmount)}`,
+        194,
+        y,
+        {
+          align: "right",
+        },
+      );
 
       y += 8;
 
@@ -577,13 +724,23 @@ export default function QuotesPage() {
       doc.setFontSize(13);
       doc.setTextColor(20, 20, 20);
 
-      doc.text("Total no PIX", 150, y, {
-        align: "right",
-      });
+      doc.text(
+        "Total no PIX",
+        150,
+        y,
+        {
+          align: "right",
+        },
+      );
 
-      doc.text(formatCurrency(pixTotal), 194, y, {
-        align: "right",
-      });
+      doc.text(
+        formatCurrency(pixTotal),
+        194,
+        y,
+        {
+          align: "right",
+        },
+      );
     }
 
     doc.setFont("helvetica", "normal");
@@ -594,14 +751,25 @@ export default function QuotesPage() {
       doc.setFontSize(9);
       doc.setTextColor(90, 90, 90);
 
-      doc.text("OBSERVAÇÕES", 14, y);
+      doc.text(
+        "OBSERVAÇÕES",
+        14,
+        y,
+      );
 
       doc.setFontSize(10);
       doc.setTextColor(50, 50, 50);
 
-      const lines = doc.splitTextToSize(notes, 180);
+      const lines = doc.splitTextToSize(
+        notes,
+        180,
+      );
 
-      doc.text(lines, 14, y + 5);
+      doc.text(
+        lines,
+        14,
+        y + 5,
+      );
     }
 
     doc.save(
@@ -627,7 +795,6 @@ export default function QuotesPage() {
 
   return (
     <div className="relative min-h-screen bg-[#050914]">
-      {/* BACKGROUND */}
       <div className="pointer-events-none fixed -bottom-40 -right-40 h-[500px] w-[500px] rounded-full bg-[#071124]/60 blur-[120px]" />
 
       <div className="pointer-events-none fixed -left-40 top-20 h-[420px] w-[420px] rounded-full bg-[rgba(var(--accent-rgb),0.025)] blur-[130px]" />
@@ -659,21 +826,7 @@ export default function QuotesPage() {
 
           <Button
             onClick={openCreate}
-            className="
-              h-10
-              bg-gradient-to-r
-              from-[#071124]
-              to-[#0d1a35]
-              text-white
-              shadow-lg
-              shadow-black/30
-              ring-1
-              ring-white/10
-              transition-all
-              duration-300
-              hover:shadow-[0_8px_30px_rgba(var(--accent-rgb),0.20)]
-              hover:ring-[rgba(var(--accent-rgb),0.30)]
-            "
+            className="h-10 bg-gradient-to-r from-[#071124] to-[#0d1a35] text-white shadow-lg shadow-black/30 ring-1 ring-white/10 transition-all duration-300 hover:shadow-[0_8px_30px_rgba(var(--accent-rgb),0.20)] hover:ring-[rgba(var(--accent-rgb),0.30)]"
           >
             <Plus className="h-4 w-4" />
             Novo Orçamento
@@ -682,105 +835,65 @@ export default function QuotesPage() {
 
         {/* STATS */}
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-xl">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wider text-white/35">
-                Total
-              </span>
+          {[
+            {
+              label: "Total",
+              value: totalQuotes,
+              text: "orçamentos cadastrados",
+              icon: FileText,
+            },
+            {
+              label: "Rascunhos",
+              value: draftQuotes,
+              text: "aguardando envio",
+              icon: Clock3,
+            },
+            {
+              label: "Enviados",
+              value: sentQuotes,
+              text: "aguardando retorno",
+              icon: Send,
+            },
+            {
+              label: "Aprovados",
+              value: approvedQuotes,
+              text: "propostas aprovadas",
+              icon: CheckCircle2,
+            },
+            {
+              label: "Valor aprovado",
+              value: formatCurrency(approvedValue),
+              text: "total aprovado",
+              icon: CheckCircle2,
+            },
+          ].map((stat) => {
+            const Icon = stat.icon;
 
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[rgba(var(--accent-rgb),0.08)]">
-                <FileText className="h-4 w-4 text-[var(--accent)]" />
+            return (
+              <div
+                key={stat.label}
+                className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-xl"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium uppercase tracking-wider text-white/35">
+                    {stat.label}
+                  </span>
+
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.04]">
+                    <Icon className="h-4 w-4 text-white/40" />
+                  </div>
+                </div>
+
+                <p className="mt-3 truncate text-2xl font-semibold text-white">
+                  {stat.value}
+                </p>
+
+                <p className="mt-1 text-xs text-white/30">
+                  {stat.text}
+                </p>
               </div>
-            </div>
-
-            <p className="mt-3 text-2xl font-semibold text-white">
-              {totalQuotes}
-            </p>
-
-            <p className="mt-1 text-xs text-white/30">
-              orçamentos cadastrados
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-xl">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wider text-white/35">
-                Rascunhos
-              </span>
-
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.04]">
-                <Clock3 className="h-4 w-4 text-white/40" />
-              </div>
-            </div>
-
-            <p className="mt-3 text-2xl font-semibold text-white">
-              {draftQuotes}
-            </p>
-
-            <p className="mt-1 text-xs text-white/30">
-              aguardando envio
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-xl">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wider text-white/35">
-                Enviados
-              </span>
-
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.04]">
-                <Send className="h-4 w-4 text-white/40" />
-              </div>
-            </div>
-
-            <p className="mt-3 text-2xl font-semibold text-white">
-              {sentQuotes}
-            </p>
-
-            <p className="mt-1 text-xs text-white/30">
-              aguardando retorno
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-xl">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wider text-white/35">
-                Aprovados
-              </span>
-
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10">
-                <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-              </div>
-            </div>
-
-            <p className="mt-3 text-2xl font-semibold text-white">
-              {approvedQuotes}
-            </p>
-
-            <p className="mt-1 text-xs text-white/30">
-              propostas aprovadas
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-xl">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wider text-white/35">
-                Valor aprovado
-              </span>
-
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[rgba(var(--accent-rgb),0.08)]">
-                <CheckCircle2 className="h-4 w-4 text-[var(--accent)]" />
-              </div>
-            </div>
-
-            <p className="mt-3 truncate text-xl font-semibold text-white">
-              {formatCurrency(approvedValue)}
-            </p>
-
-            <p className="mt-1 text-xs text-white/30">
-              total aprovado
-            </p>
-          </div>
+            );
+          })}
         </div>
 
         {/* LISTA */}
@@ -806,26 +919,7 @@ export default function QuotesPage() {
                     placeholder="Buscar cliente, produto ou número..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="
-                      h-10
-                      w-full
-                      rounded-xl
-                      border
-                      border-white/10
-                      bg-white/[0.04]
-                      py-2
-                      pl-10
-                      pr-4
-                      text-sm
-                      text-white
-                      outline-none
-                      placeholder:text-white/25
-                      transition-all
-                      focus:border-[rgba(var(--accent-rgb),0.45)]
-                      focus:bg-white/[0.06]
-                      focus:ring-1
-                      focus:ring-[rgba(var(--accent-rgb),0.12)]
-                    "
+                    className="h-10 w-full rounded-xl border border-white/10 bg-white/[0.04] py-2 pl-10 pr-4 text-sm text-white outline-none placeholder:text-white/25 transition-all focus:border-[rgba(var(--accent-rgb),0.45)] focus:bg-white/[0.06] focus:ring-1 focus:ring-[rgba(var(--accent-rgb),0.12)]"
                   />
                 </div>
 
@@ -838,24 +932,16 @@ export default function QuotesPage() {
                     ...quoteStatuses,
                   ]}
                   value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="
-                    h-10
-                    w-full
-                    border-white/10
-                    bg-white/[0.04]
-                    text-white
-                    focus:border-[rgba(var(--accent-rgb),0.45)]
-                    focus:ring-[rgba(var(--accent-rgb),0.15)]
-                    sm:w-44
-                  "
+                  onChange={(e) =>
+                    setStatusFilter(e.target.value)
+                  }
+                  className="h-10 w-full border-white/10 bg-white/[0.04] text-white focus:border-[rgba(var(--accent-rgb),0.45)] focus:ring-[rgba(var(--accent-rgb),0.15)] sm:w-44"
                 />
               </div>
             </div>
           </CardHeader>
 
           <CardContent className="p-0">
-            {/* DESKTOP */}
             <div className="hidden overflow-x-auto md:block">
               <Table>
                 <TableHead className="border-b border-white/10">
@@ -906,13 +992,7 @@ export default function QuotesPage() {
                   {filtered.map((quote) => (
                     <TableRow
                       key={quote.id}
-                      className="
-                        border-b
-                        border-white/5
-                        transition-colors
-                        hover:bg-white/[0.025]
-                        last:border-0
-                      "
+                      className="border-b border-white/5 transition-colors hover:bg-white/[0.025] last:border-0"
                     >
                       <TableCell>
                         <div>
@@ -940,17 +1020,21 @@ export default function QuotesPage() {
 
                       <TableCell className="text-center">
                         <span className="rounded-lg border border-white/10 bg-white/[0.03] px-2 py-1 text-[11px] text-white/50">
-                          {quote.items.length}
+                          {quote.items?.length ?? 0}
                         </span>
                       </TableCell>
 
                       <TableCell className="text-right text-sm text-white/50">
-                        {formatCurrency(quote.subtotal)}
+                        {formatCurrency(
+                          Number(quote.subtotal ?? 0),
+                        )}
                       </TableCell>
 
                       <TableCell className="text-right">
                         <span className="text-sm font-semibold text-white">
-                          {formatCurrency(quote.total)}
+                          {formatCurrency(
+                            Number(quote.total ?? 0),
+                          )}
                         </span>
                       </TableCell>
 
@@ -971,23 +1055,10 @@ export default function QuotesPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => generatePDF(quote)}
-                            
-                            className="
-                              h-9
-                              w-9
-                              rounded-lg
-                              border
-                              border-white/10
-                              bg-white/[0.03]
-                              p-0
-                              text-white/50
-                              transition-all
-                              duration-200
-                              hover:border-[rgba(var(--accent-rgb),0.35)]
-                              hover:bg-[rgba(var(--accent-rgb),0.08)]
-                              hover:text-[var(--accent)]
-                            "
+                            onClick={() =>
+                              generatePDF(quote)
+                            }
+                            className="h-9 w-9 rounded-lg border border-white/10 bg-white/[0.03] p-0 text-white/50 hover:border-[rgba(var(--accent-rgb),0.35)] hover:bg-[rgba(var(--accent-rgb),0.08)] hover:text-[var(--accent)]"
                           >
                             <FileDown className="h-4 w-4" />
                           </Button>
@@ -995,23 +1066,10 @@ export default function QuotesPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => openEdit(quote)}
-                            
-                            className="
-                              h-9
-                              w-9
-                              rounded-lg
-                              border
-                              border-white/10
-                              bg-white/[0.03]
-                              p-0
-                              text-white/50
-                              transition-all
-                              duration-200
-                              hover:border-[rgba(var(--accent-rgb),0.35)]
-                              hover:bg-[rgba(var(--accent-rgb),0.08)]
-                              hover:text-[var(--accent)]
-                            "
+                            onClick={() =>
+                              openEdit(quote)
+                            }
+                            className="h-9 w-9 rounded-lg border border-white/10 bg-white/[0.03] p-0 text-white/50 hover:border-[rgba(var(--accent-rgb),0.35)] hover:bg-[rgba(var(--accent-rgb),0.08)] hover:text-[var(--accent)]"
                           >
                             <Pencil className="h-4 w-4" />
                           </Button>
@@ -1019,23 +1077,10 @@ export default function QuotesPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleDelete(quote.id)}
-                            
-                            className="
-                              h-9
-                              w-9
-                              rounded-lg
-                              border
-                              border-white/10
-                              bg-white/[0.03]
-                              p-0
-                              text-white/50
-                              transition-all
-                              duration-200
-                              hover:border-red-500/40
-                              hover:bg-red-500/10
-                              hover:text-red-400
-                            "
+                            onClick={() =>
+                              handleDelete(quote.id)
+                            }
+                            className="h-9 w-9 rounded-lg border border-white/10 bg-white/[0.03] p-0 text-white/50 hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-400"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -1056,8 +1101,8 @@ export default function QuotesPage() {
 
                           {search && (
                             <p className="mt-1 text-xs text-white/25">
-                              Tente buscar por outro cliente, produto ou
-                              número.
+                              Tente buscar por outro cliente,
+                              produto ou número.
                             </p>
                           )}
                         </div>
@@ -1073,16 +1118,7 @@ export default function QuotesPage() {
               {filtered.map((quote) => (
                 <div
                   key={quote.id}
-                  className="
-                    rounded-2xl
-                    border
-                    border-white/10
-                    bg-white/[0.025]
-                    p-4
-                    shadow-lg
-                    shadow-black/20
-                    backdrop-blur-xl
-                  "
+                  className="rounded-2xl border border-white/10 bg-white/[0.025] p-4 shadow-lg shadow-black/20 backdrop-blur-xl"
                 >
                   <div className="space-y-4">
                     <div className="flex items-start justify-between gap-3">
@@ -1127,7 +1163,9 @@ export default function QuotesPage() {
                           </p>
 
                           <p className="mt-1 text-lg font-bold text-white">
-                            {formatCurrency(quote.total)}
+                            {formatCurrency(
+                              Number(quote.total ?? 0),
+                            )}
                           </p>
                         </div>
 
@@ -1137,7 +1175,9 @@ export default function QuotesPage() {
                           </p>
 
                           <p className="mt-1 text-sm text-white/50">
-                            {formatCurrency(quote.subtotal)}
+                            {formatCurrency(
+                              Number(quote.subtotal ?? 0),
+                            )}
                           </p>
                         </div>
                       </div>
@@ -1150,7 +1190,7 @@ export default function QuotesPage() {
                         </p>
 
                         <p className="mt-1 text-sm text-white/60">
-                          {quote.items.length}
+                          {quote.items?.length ?? 0}
                         </p>
                       </div>
 
@@ -1160,7 +1200,9 @@ export default function QuotesPage() {
                         </p>
 
                         <p className="mt-1 text-sm text-white/60">
-                          {formatDate(quote.validUntil)}
+                          {formatDate(
+                            quote.validUntil,
+                          )}
                         </p>
                       </div>
 
@@ -1170,7 +1212,9 @@ export default function QuotesPage() {
                         </p>
 
                         <p className="mt-1 text-sm text-white/60">
-                          {formatDate(quote.createdAt)}
+                          {formatDate(
+                            quote.createdAt,
+                          )}
                         </p>
                       </div>
                     </div>
@@ -1179,65 +1223,38 @@ export default function QuotesPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => generatePDF(quote)}
-                        className="
-                          h-10
-                          flex-1
-                          rounded-xl
-                          border
-                          border-white/10
-                          bg-white/[0.03]
-                          text-white/50
-                          transition-all
-                          hover:border-[rgba(var(--accent-rgb),0.35)]
-                          hover:bg-[rgba(var(--accent-rgb),0.08)]
-                          hover:text-[var(--accent)]
-                        "
+                        onClick={() =>
+                          generatePDF(quote)
+                        }
+                        className="h-10 flex-1 rounded-xl border border-white/10 bg-white/[0.03] text-white/50 hover:border-[rgba(var(--accent-rgb),0.35)] hover:bg-[rgba(var(--accent-rgb),0.08)] hover:text-[var(--accent)]"
                       >
                         <FileDown className="h-4 w-4" />
-                        <span className="ml-2 text-xs">PDF</span>
+                        <span className="ml-2 text-xs">
+                          PDF
+                        </span>
                       </Button>
 
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => openEdit(quote)}
-                        className="
-                          h-10
-                          flex-1
-                          rounded-xl
-                          border
-                          border-white/10
-                          bg-white/[0.03]
-                          text-white/50
-                          transition-all
-                          hover:border-[rgba(var(--accent-rgb),0.35)]
-                          hover:bg-[rgba(var(--accent-rgb),0.08)]
-                          hover:text-[var(--accent)]
-                        "
+                        onClick={() =>
+                          openEdit(quote)
+                        }
+                        className="h-10 flex-1 rounded-xl border border-white/10 bg-white/[0.03] text-white/50 hover:border-[rgba(var(--accent-rgb),0.35)] hover:bg-[rgba(var(--accent-rgb),0.08)] hover:text-[var(--accent)]"
                       >
                         <Pencil className="h-4 w-4" />
-                        <span className="ml-2 text-xs">Editar</span>
+                        <span className="ml-2 text-xs">
+                          Editar
+                        </span>
                       </Button>
 
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleDelete(quote.id)}
-                        className="
-                          h-10
-                          w-10
-                          rounded-xl
-                          border
-                          border-white/10
-                          bg-white/[0.03]
-                          p-0
-                          text-white/50
-                          transition-all
-                          hover:border-red-500/40
-                          hover:bg-red-500/10
-                          hover:text-red-400
-                        "
+                        onClick={() =>
+                          handleDelete(quote.id)
+                        }
+                        className="h-10 w-10 rounded-xl border border-white/10 bg-white/[0.03] p-0 text-white/50 hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-400"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -1264,7 +1281,11 @@ export default function QuotesPage() {
       <Modal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
-        title={editingQuote ? "Editar Orçamento" : "Novo Orçamento"}
+        title={
+          editingQuote
+            ? "Editar Orçamento"
+            : "Novo Orçamento"
+        }
         size="xl"
         className="border border-white/10 bg-[#0a1120]/95 text-white backdrop-blur-2xl"
       >
@@ -1272,7 +1293,6 @@ export default function QuotesPage() {
           <div className="grid gap-6 lg:grid-cols-[1fr_420px]">
             {/* ESQUERDA */}
             <div className="space-y-6">
-              {/* INFORMAÇÕES */}
               <div>
                 <div className="mb-3">
                   <h3 className="text-sm font-semibold text-white">
@@ -1280,7 +1300,8 @@ export default function QuotesPage() {
                   </h3>
 
                   <p className="mt-1 text-xs text-white/30">
-                    Defina o cliente, produto e validade da proposta.
+                    Defina o cliente, produto e validade da
+                    proposta.
                   </p>
                 </div>
 
@@ -1291,12 +1312,15 @@ export default function QuotesPage() {
                     placeholder="Digite o nome do produto"
                     value={form.productName}
                     onChange={(e) => {
+                      const productName =
+                        e.target.value;
+
                       setForm((prev) => ({
                         ...prev,
-                        productName: e.target.value,
+                        productName,
                       }));
 
-                      if (e.target.value.trim()) {
+                      if (productName.trim()) {
                         setErrors((prev) => ({
                           ...prev,
                           product: "",
@@ -1305,14 +1329,7 @@ export default function QuotesPage() {
                     }}
                     error={errors.product}
                     required
-                    className="
-                      border-white/10
-                      bg-white/[0.04]
-                      text-white
-                      placeholder:text-white/25
-                      focus:border-[rgba(var(--accent-rgb),0.45)]
-                      focus:ring-[rgba(var(--accent-rgb),0.15)]
-                    "
+                    className="border-white/10 bg-white/[0.04] text-white placeholder:text-white/25 focus:border-[rgba(var(--accent-rgb),0.45)] focus:ring-[rgba(var(--accent-rgb),0.15)]"
                   />
 
                   <Input
@@ -1323,10 +1340,13 @@ export default function QuotesPage() {
                     onChange={(e) => {
                       setForm((prev) => ({
                         ...prev,
-                        clientName: e.target.value,
+                        clientName:
+                          e.target.value,
                       }));
 
-                      if (e.target.value.trim()) {
+                      if (
+                        e.target.value.trim()
+                      ) {
                         setErrors((prev) => ({
                           ...prev,
                           client: "",
@@ -1335,14 +1355,7 @@ export default function QuotesPage() {
                     }}
                     error={errors.client}
                     required
-                    className="
-                      border-white/10
-                      bg-white/[0.04]
-                      text-white
-                      placeholder:text-white/25
-                      focus:border-[rgba(var(--accent-rgb),0.45)]
-                      focus:ring-[rgba(var(--accent-rgb),0.15)]
-                    "
+                    className="border-white/10 bg-white/[0.04] text-white placeholder:text-white/25 focus:border-[rgba(var(--accent-rgb),0.45)] focus:ring-[rgba(var(--accent-rgb),0.15)]"
                   />
 
                   <Input
@@ -1353,17 +1366,12 @@ export default function QuotesPage() {
                     onChange={(e) =>
                       setForm((prev) => ({
                         ...prev,
-                        validUntil: e.target.value,
+                        validUntil:
+                          e.target.value,
                       }))
                     }
                     required
-                    className="
-                      border-white/10
-                      bg-white/[0.04]
-                      text-white
-                      focus:border-[rgba(var(--accent-rgb),0.45)]
-                      focus:ring-[rgba(var(--accent-rgb),0.15)]
-                    "
+                    className="border-white/10 bg-white/[0.04] text-white focus:border-[rgba(var(--accent-rgb),0.45)] focus:ring-[rgba(var(--accent-rgb),0.15)]"
                   />
 
                   <Input
@@ -1372,24 +1380,16 @@ export default function QuotesPage() {
                     placeholder="Informações adicionais para o cliente..."
                     value={form.notes}
                     onChange={(e) =>
-                      setForm({
-                        ...form,
+                      setForm((prev) => ({
+                        ...prev,
                         notes: e.target.value,
-                      })
+                      }))
                     }
-                    className="
-                      border-white/10
-                      bg-white/[0.04]
-                      text-white
-                      placeholder:text-white/25
-                      focus:border-[rgba(var(--accent-rgb),0.45)]
-                      focus:ring-[rgba(var(--accent-rgb),0.15)]
-                    "
+                    className="border-white/10 bg-white/[0.04] text-white placeholder:text-white/25 focus:border-[rgba(var(--accent-rgb),0.45)] focus:ring-[rgba(var(--accent-rgb),0.15)]"
                   />
                 </div>
               </div>
 
-              {/* STATUS */}
               <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-4">
                 <div className="mb-3">
                   <h3 className="text-sm font-semibold text-white">
@@ -1407,23 +1407,17 @@ export default function QuotesPage() {
                   onChange={(e) =>
                     setForm((prev) => ({
                       ...prev,
-                      status: e.target.value as Quote["status"],
+                      status:
+                        e.target.value as Quote["status"],
                     }))
                   }
-                  className="
-                    border-white/10
-                    bg-white/[0.04]
-                    text-white
-                    focus:border-[rgba(var(--accent-rgb),0.45)]
-                    focus:ring-[rgba(var(--accent-rgb),0.15)]
-                  "
+                  className="border-white/10 bg-white/[0.04] text-white focus:border-[rgba(var(--accent-rgb),0.45)] focus:ring-[rgba(var(--accent-rgb),0.15)]"
                 />
               </div>
             </div>
 
             {/* DIREITA */}
             <div className="flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/[0.025]">
-              {/* HEADER ITENS */}
               <div className="border-b border-white/10 px-5 py-4">
                 <div className="flex items-center justify-between">
                   <div>
@@ -1438,7 +1432,9 @@ export default function QuotesPage() {
 
                   <span className="rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] font-medium text-white/40">
                     {form.items.length}{" "}
-                    {form.items.length === 1 ? "item" : "itens"}
+                    {form.items.length === 1
+                      ? "item"
+                      : "itens"}
                   </span>
                 </div>
               </div>
@@ -1453,17 +1449,13 @@ export default function QuotesPage() {
                     placeholder="1"
                     value={itemForm.quantity}
                     onChange={(e) =>
-                      setItemForm({
-                        ...itemForm,
-                        quantity: e.target.value,
-                      })
+                      setItemForm((prev) => ({
+                        ...prev,
+                        quantity:
+                          e.target.value,
+                      }))
                     }
-                    className="
-                      border-white/10
-                      bg-white/[0.04]
-                      text-white
-                      placeholder:text-white/25
-                    "
+                    className="border-white/10 bg-white/[0.04] text-white placeholder:text-white/25"
                   />
 
                   <Input
@@ -1474,33 +1466,20 @@ export default function QuotesPage() {
                     placeholder="0,00"
                     value={itemForm.unitPrice}
                     onChange={(e) =>
-                      setItemForm({
-                        ...itemForm,
-                        unitPrice: e.target.value,
-                      })
+                      setItemForm((prev) => ({
+                        ...prev,
+                        unitPrice:
+                          e.target.value,
+                      }))
                     }
-                    className="
-                      border-white/10
-                      bg-white/[0.04]
-                      text-white
-                      placeholder:text-white/25
-                    "
+                    className="border-white/10 bg-white/[0.04] text-white placeholder:text-white/25"
                   />
                 </div>
 
                 <Button
                   type="button"
                   onClick={addItem}
-                  className="
-                    mt-3
-                    h-9
-                    w-full
-                    bg-[var(--accent)]
-                    text-white
-                    shadow-lg
-                    shadow-orange-950/20
-                    hover:bg-[#ff7b24]
-                  "
+                  className="mt-3 h-9 w-full bg-[var(--accent)] text-white shadow-lg shadow-orange-950/20 hover:bg-[#ff7b24]"
                 >
                   <Plus className="h-4 w-4" />
                   Adicionar item
@@ -1518,79 +1497,87 @@ export default function QuotesPage() {
                     </p>
 
                     <p className="mt-1 text-[11px] text-white/20">
-                      Adicione pelo menos um item ao orçamento.
+                      Adicione pelo menos um item ao
+                      orçamento.
                     </p>
                   </div>
                 )}
 
-                {form.items.map((item, idx) => (
-                  <div
-                    key={idx}
-                    className="
-                      rounded-xl
-                      border
-                      border-white/10
-                      bg-[#071124]
-                      p-3
-                      transition-colors
-                      hover:border-white/15
-                    "
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-white">
-                          {item.description}
-                        </p>
+                {form.items.map((item, idx) => {
+                  const quantity = Number(
+                    item.quantity,
+                  );
 
-                        <p className="mt-1 text-xs text-white/35">
-                          {item.quantity} ×{" "}
-                          {formatCurrency(Number(item.unitPrice))}
-                        </p>
-                      </div>
+                  const unitPrice = Number(
+                    item.unitPrice,
+                  );
 
-                      <div className="flex shrink-0 items-center gap-2">
-                        <span className="text-sm font-semibold text-white">
-                          {formatCurrency(
-                            Number(item.quantity) *
-                              Number(item.unitPrice),
-                          )}
-                        </span>
+                  const itemTotal =
+                    Number.isFinite(quantity) &&
+                    Number.isFinite(unitPrice)
+                      ? quantity * unitPrice
+                      : 0;
 
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          type="button"
-                          onClick={() => removeItem(idx)}
-                          className="
-                            h-8
-                            w-8
-                            rounded-lg
-                            p-0
-                            text-white/30
-                            hover:bg-red-500/10
-                            hover:text-red-400
-                          "
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                  return (
+                    <div
+                      key={idx}
+                      className="rounded-xl border border-white/10 bg-[#071124] p-3 transition-colors hover:border-white/15"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium text-white">
+                            {item.description ||
+                              "Item"}
+                          </p>
+
+                          <p className="mt-1 text-xs text-white/35">
+                            {quantity} ×{" "}
+                            {formatCurrency(
+                              unitPrice,
+                            )}
+                          </p>
+                        </div>
+
+                        <div className="flex shrink-0 items-center gap-2">
+                          <span className="text-sm font-semibold text-white">
+                            {formatCurrency(
+                              itemTotal,
+                            )}
+                          </span>
+
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            type="button"
+                            onClick={() =>
+                              removeItem(idx)
+                            }
+                            className="h-8 w-8 rounded-lg p-0 text-white/30 hover:bg-red-500/10 hover:text-red-400"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               {/* RESUMO */}
               <div className="border-t border-white/10 bg-white/[0.02] p-5">
                 <div className="space-y-3">
                   <div className="flex justify-between text-white/50">
-                    <span className="text-xs">Subtotal</span>
+                    <span className="text-xs">
+                      Subtotal
+                    </span>
 
                     <span className="text-xs">
-                      {formatCurrency(calcSubtotal())}
+                      {formatCurrency(
+                        calcSubtotal(),
+                      )}
                     </span>
                   </div>
 
-                  {/* DESCONTO PIX */}
                   <div className="rounded-xl border border-white/10 bg-white/[0.025] p-3">
                     <div className="flex items-center justify-between gap-3">
                       <div>
@@ -1610,30 +1597,25 @@ export default function QuotesPage() {
                           max="100"
                           step="0.01"
                           placeholder="0"
-                          value={form.discountPercent}
+                          value={
+                            form.discountPercent
+                          }
                           onChange={(e) => {
-                            const value = e.target.value;
+                            const value =
+                              e.target.value;
 
                             if (
                               value === "" ||
                               Number(value) <= 100
                             ) {
-                              setForm({
-                                ...form,
-                                discountPercent: value,
-                              });
+                              setForm((prev) => ({
+                                ...prev,
+                                discountPercent:
+                                  value,
+                              }));
                             }
                           }}
-                          className="
-                            h-9
-                            w-20
-                            border-white/10
-                            bg-white/[0.04]
-                            px-2
-                            text-center
-                            text-sm
-                            text-white
-                          "
+                          className="h-9 w-20 border-white/10 bg-white/[0.04] px-2 text-center text-sm text-white"
                         />
 
                         <span className="text-sm text-white/40">
@@ -1643,14 +1625,20 @@ export default function QuotesPage() {
                     </div>
                   </div>
 
-                  {calcDiscountPercent() > 0 && (
+                  {calcDiscountPercent() >
+                    0 && (
                     <div className="flex justify-between text-white/50">
                       <span className="text-xs">
-                        Desconto ({calcDiscountPercent()}%)
+                        Desconto (
+                        {calcDiscountPercent()}
+                        %)
                       </span>
 
                       <span className="text-xs text-red-400">
-                        - {formatCurrency(calcDiscountAmount())}
+                        -{" "}
+                        {formatCurrency(
+                          calcDiscountAmount(),
+                        )}
                       </span>
                     </div>
                   )}
@@ -1664,12 +1652,15 @@ export default function QuotesPage() {
                       </p>
 
                       <p className="mt-1 text-2xl font-bold text-white">
-                        {formatCurrency(calcTotal())}
+                        {formatCurrency(
+                          calcTotal(),
+                        )}
                       </p>
                     </div>
                   </div>
 
-                  {calcDiscountPercent() > 0 && (
+                  {calcDiscountPercent() >
+                    0 && (
                     <div className="rounded-xl border border-[rgba(var(--accent-rgb),0.25)] bg-[rgba(var(--accent-rgb),0.05)] px-4 py-3">
                       <div className="flex items-center justify-between gap-4">
                         <div>
@@ -1683,7 +1674,9 @@ export default function QuotesPage() {
                         </div>
 
                         <span className="text-lg font-bold text-[var(--accent)]">
-                          {formatCurrency(calcPixTotal())}
+                          {formatCurrency(
+                            calcPixTotal(),
+                          )}
                         </span>
                       </div>
                     </div>
@@ -1698,16 +1691,10 @@ export default function QuotesPage() {
             <Button
               type="button"
               variant="secondary"
-              onClick={generatePDF}
-              className="
-                border-white/10
-                bg-white/[0.04]
-                text-white/60
-                ring-1
-                ring-white/5
-                hover:bg-white/[0.08]
-                hover:text-white
-              "
+              onClick={() =>
+                generatePDF()
+              }
+              className="border-white/10 bg-white/[0.04] text-white/60 ring-1 ring-white/5 hover:bg-white/[0.08] hover:text-white"
             >
               <FileDown className="mr-2 h-4 w-4" />
               Gerar PDF
@@ -1717,33 +1704,17 @@ export default function QuotesPage() {
               <Button
                 type="button"
                 variant="secondary"
-                onClick={() => setModalOpen(false)}
-                className="
-                  border-white/10
-                  bg-white/[0.04]
-                  text-white/60
-                  ring-1
-                  ring-white/5
-                  hover:bg-white/[0.08]
-                  hover:text-white
-                "
+                onClick={() =>
+                  setModalOpen(false)
+                }
+                className="border-white/10 bg-white/[0.04] text-white/60 ring-1 ring-white/5 hover:bg-white/[0.08] hover:text-white"
               >
                 Cancelar
               </Button>
 
               <Button
                 type="submit"
-                className="
-                  bg-gradient-to-r
-                  from-[#071124]
-                  to-[#0d1a35]
-                  text-white
-                  shadow-lg
-                  shadow-black/20
-                  ring-1
-                  ring-white/10
-                  hover:ring-[rgba(var(--accent-rgb),0.35)]
-                "
+                className="bg-gradient-to-r from-[#071124] to-[#0d1a35] text-white shadow-lg shadow-black/20 ring-1 ring-white/10 hover:ring-[rgba(var(--accent-rgb),0.35)]"
               >
                 {editingQuote
                   ? "Salvar alterações"
@@ -1756,3 +1727,4 @@ export default function QuotesPage() {
     </div>
   );
 }
+

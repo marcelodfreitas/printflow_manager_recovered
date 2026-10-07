@@ -71,6 +71,7 @@ interface CalculationResult {
   }[];
 
   machineCost: number;
+  laborCost: number;
   filamentCost: number;
   totalCost: number;
 
@@ -131,10 +132,7 @@ function parseNumber(value: unknown): number | undefined {
     return undefined;
   }
 
-  const normalized = value
-    .trim()
-    .replace(/\s/g, "")
-    .replace(",", ".");
+  const normalized = value.trim().replace(/\s/g, "").replace(",", ".");
 
   const match = normalized.match(/-?\d+(?:\.\d+)?/);
 
@@ -190,24 +188,16 @@ function parseTimeToSeconds(value: string): number {
   );
 
   if (hourMatch || minuteMatch || secondMatch) {
-    const hours = hourMatch
-      ? Number(hourMatch[1].replace(",", "."))
-      : 0;
+    const hours = hourMatch ? Number(hourMatch[1].replace(",", ".")) : 0;
 
-    const minutes = minuteMatch
-      ? Number(minuteMatch[1].replace(",", "."))
-      : 0;
+    const minutes = minuteMatch ? Number(minuteMatch[1].replace(",", ".")) : 0;
 
-    const seconds = secondMatch
-      ? Number(secondMatch[1].replace(",", "."))
-      : 0;
+    const seconds = secondMatch ? Number(secondMatch[1].replace(",", ".")) : 0;
 
     return hours * 3600 + minutes * 60 + seconds;
   }
 
-  const clockMatch = normalized.match(
-    /^(\d+):(\d+)(?::(\d+))?$/,
-  );
+  const clockMatch = normalized.match(/^(\d+):(\d+)(?::(\d+))?$/);
 
   if (clockMatch) {
     const hours = Number(clockMatch[1]);
@@ -263,10 +253,7 @@ function hoursFromSeconds(seconds: number) {
 function getCommentValue(text: string, key: string) {
   const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-  const regex = new RegExp(
-    `^\\s*;\\s*${escapedKey}\\s*=\\s*(.*?)\\s*$`,
-    "im",
-  );
+  const regex = new RegExp(`^\\s*;\\s*${escapedKey}\\s*=\\s*(.*?)\\s*$`, "im");
 
   return text.match(regex)?.[1]?.trim();
 }
@@ -332,16 +319,11 @@ function colorDistance(first?: string, second?: string) {
   }
 
   return Math.sqrt(
-    Math.pow(a.r - b.r, 2) +
-      Math.pow(a.g - b.g, 2) +
-      Math.pow(a.b - b.b, 2),
+    Math.pow(a.r - b.r, 2) + Math.pow(a.g - b.g, 2) + Math.pow(a.b - b.b, 2),
   );
 }
 
-function findMatchingFilament(
-  item: ParsedFilament,
-  filaments: Filament[],
-) {
+function findMatchingFilament(item: ParsedFilament, filaments: Filament[]) {
   if (item.matchedFilamentId) {
     const manuallySelected = filaments.find(
       (filament) => filament.id === item.matchedFilamentId,
@@ -359,8 +341,7 @@ function findMatchingFilament(
     const exactColor = filaments.find(
       (filament) =>
         filament.colorHex?.toLowerCase() === itemColor &&
-        (!itemMaterial ||
-          normalizeText(filament.type) === itemMaterial),
+        (!itemMaterial || normalizeText(filament.type) === itemMaterial),
     );
 
     if (exactColor) {
@@ -368,8 +349,7 @@ function findMatchingFilament(
     }
 
     const sameColor = filaments.find(
-      (filament) =>
-        filament.colorHex?.toLowerCase() === itemColor,
+      (filament) => filament.colorHex?.toLowerCase() === itemColor,
     );
 
     if (sameColor) {
@@ -379,10 +359,7 @@ function findMatchingFilament(
     const closestColor = [...filaments]
       .map((filament) => ({
         filament,
-        distance: colorDistance(
-          item.colorHex,
-          filament.colorHex,
-        ),
+        distance: colorDistance(item.colorHex, filament.colorHex),
       }))
       .filter((entry) => Number.isFinite(entry.distance))
       .sort((a, b) => a.distance - b.distance)[0];
@@ -411,9 +388,7 @@ function findMatchingFilament(
       color.includes(filamentColor);
 
     const materialMatches =
-      !material ||
-      filamentType === material ||
-      filamentName.includes(material);
+      !material || filamentType === material || filamentName.includes(material);
 
     return colorMatches && materialMatches;
   });
@@ -434,10 +409,7 @@ function findMatchingFilament(
   });
 }
 
-function findMatchingPrinter(
-  printerName: string,
-  printers: PrinterType[],
-) {
+function findMatchingPrinter(printerName: string, printers: PrinterType[]) {
   const normalized = normalizeText(printerName);
 
   if (!normalized) {
@@ -459,10 +431,7 @@ function findMatchingPrinter(
   });
 }
 
-function parseGCode(
-  text: string,
-  fileName: string,
-): ParsedGCode {
+function parseGCode(text: string, fileName: string): ParsedGCode {
   const modelTimeValue = getHeaderValue(
     text,
     /;\s*model printing time:\s*([^;]+);/i,
@@ -473,13 +442,9 @@ function parseGCode(
     /;\s*model printing time:\s*[^;]+;\s*total estimated time:\s*([^\r\n]+)/i,
   );
 
-  const modelPrintTimeSeconds = parseTimeToSeconds(
-    modelTimeValue || "",
-  );
+  const modelPrintTimeSeconds = parseTimeToSeconds(modelTimeValue || "");
 
-  const totalEstimatedTimeSeconds = parseTimeToSeconds(
-    totalTimeValue || "",
-  );
+  const totalEstimatedTimeSeconds = parseTimeToSeconds(totalTimeValue || "");
 
   const layerValue = getHeaderValue(
     text,
@@ -509,9 +474,7 @@ function parseGCode(
     getCommentValue(text, "filament_colour"),
   );
 
-  const filamentTypes = parseStringList(
-    getCommentValue(text, "filament_type"),
-  );
+  const filamentTypes = parseStringList(getCommentValue(text, "filament_type"));
 
   const filamentVendors = parseStringList(
     getCommentValue(text, "filament_vendor"),
@@ -526,10 +489,7 @@ function parseGCode(
     getCommentValue(text, "print_compatible_printers") ||
     "";
 
-  const printerSettingsId = getCommentValue(
-    text,
-    "printer_settings_id",
-  );
+  const printerSettingsId = getCommentValue(text, "printer_settings_id");
 
   const material = filamentTypes.find(Boolean) || "";
   const vendor = filamentVendors.find(Boolean) || "";
@@ -541,13 +501,10 @@ function parseGCode(
 
   const filaments: ParsedFilament[] = usedIndexes
     .map((selfIndex) => {
-      const selfIndexPosition =
-        filamentSelfIndexes.indexOf(selfIndex);
+      const selfIndexPosition = filamentSelfIndexes.indexOf(selfIndex);
 
       const arrayIndex =
-        selfIndexPosition >= 0
-          ? selfIndexPosition
-          : selfIndex - 1;
+        selfIndexPosition >= 0 ? selfIndexPosition : selfIndex - 1;
 
       const rawColor = filamentColors[arrayIndex] || "";
 
@@ -561,11 +518,9 @@ function parseGCode(
         ? lengthValues[arrayIndex] / 1000
         : 0;
 
-      const filamentMaterial =
-        filamentTypes[arrayIndex] || material;
+      const filamentMaterial = filamentTypes[arrayIndex] || material;
 
-      const filamentVendor =
-        filamentVendors[arrayIndex] || vendor;
+      const filamentVendor = filamentVendors[arrayIndex] || vendor;
 
       return {
         index: selfIndex,
@@ -608,38 +563,28 @@ function parseGCode(
 }
 
 export default function CalculosPage() {
-  const {
-    filaments,
-    loading: loadingFilaments,
-  } = useFilaments();
+  
+  const { filaments, loading: loadingFilaments } = useFilaments();
 
-  const {
-    printers,
-    loading: loadingPrinters,
-  } = usePrinters();
+  const { printers, loading: loadingPrinters } = usePrinters();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [parsed, setParsed] =
-    useState<ParsedGCode | null>(null);
+  const [parsed, setParsed] = useState<ParsedGCode | null>(null);
 
-  const [selectedPrinterId, setSelectedPrinterId] =
-    useState("");
+  const [selectedPrinterId, setSelectedPrinterId] = useState("");
 
-  const [dragActive, setDragActive] =
-    useState(false);
+  const [dragActive, setDragActive] = useState(false);
 
-  const [loadingFile, setLoadingFile] =
-    useState(false);
+  const [loadingFile, setLoadingFile] = useState(false);
 
-  const [error, setError] =
-    useState("");
+  const [error, setError] = useState("");
 
-  const [margins, setMargins] =
-    useState(DEFAULT_MARGINS);
+  const [margins, setMargins] = useState(DEFAULT_MARGINS);
 
-  const loading =
-    loadingFilaments || loadingPrinters;
+  const [laborCost, setLaborCost] = useState(0);
+
+  const loading = loadingFilaments || loadingPrinters;
 
   const matchedPrinter = useMemo(() => {
     if (!parsed) {
@@ -647,21 +592,11 @@ export default function CalculosPage() {
     }
 
     if (selectedPrinterId) {
-      return printers.find(
-        (printer) =>
-          printer.id === selectedPrinterId,
-      );
+      return printers.find((printer) => printer.id === selectedPrinterId);
     }
 
-    return findMatchingPrinter(
-      parsed.printerName,
-      printers,
-    );
-  }, [
-    parsed,
-    printers,
-    selectedPrinterId,
-  ]);
+    return findMatchingPrinter(parsed.printerName, printers);
+  }, [parsed, printers, selectedPrinterId]);
 
   const preparedFilaments = useMemo<PreparedFilament[]>(() => {
     if (!parsed) {
@@ -670,111 +605,80 @@ export default function CalculosPage() {
 
     return parsed.filaments.map((item) => ({
       ...item,
-      matchedFilament:
-        findMatchingFilament(item, filaments),
+      matchedFilament: findMatchingFilament(item, filaments),
     }));
   }, [parsed, filaments]);
 
-  const unmatchedFilaments =
-    preparedFilaments.filter(
-      (item) =>
-        item.grams > 0 &&
-        !item.matchedFilament,
-    );
+  const unmatchedFilaments = preparedFilaments.filter(
+    (item) => item.grams > 0 && !item.matchedFilament,
+  );
 
-  const result: CalculationResult | null =
-    useMemo(() => {
-      if (
-        !parsed ||
-        !matchedPrinter ||
-        unmatchedFilaments.length > 0
-      ) {
-        return null;
-      }
+  const result: CalculationResult | null = useMemo(() => {
+    if (!parsed || !matchedPrinter || unmatchedFilaments.length > 0) {
+      return null;
+    }
 
-      const filamentCosts =
-        preparedFilaments.map((item) => {
-          const filament =
-            item.matchedFilament;
+    const filamentCosts = preparedFilaments.map((item) => {
+      const filament = item.matchedFilament;
 
-          const cost = filament
-            ? (item.grams / 1000) *
-              filament.costPerKg
-            : 0;
-
-          return {
-            item,
-            filament,
-            cost,
-          };
-        });
-
-      const filamentCost =
-        filamentCosts.reduce(
-          (sum, item) => sum + item.cost,
-          0,
-        );
-
-      const machineHours =
-        hoursFromSeconds(
-          parsed.totalEstimatedTimeSeconds,
-        );
-
-      const machineCost =
-        machineHours *
-        matchedPrinter.costPerHour;
-
-      const totalCost =
-        filamentCost + machineCost;
-
-      const minimumPrice =
-        margins.minimum >= 100
-          ? 0
-          : totalCost /
-            (1 - margins.minimum / 100);
-
-      const recommendedPrice =
-        margins.recommended >= 100
-          ? 0
-          : totalCost /
-            (1 - margins.recommended / 100);
-
-      const premiumPrice =
-        margins.premium >= 100
-          ? 0
-          : totalCost /
-            (1 - margins.premium / 100);
-
-      const recommendedProfit =
-        recommendedPrice - totalCost;
+      const cost = filament ? (item.grams / 1000) * filament.costPerKg : 0;
 
       return {
-        filamentCosts,
-        machineCost,
-        filamentCost,
-        totalCost,
-        minimumPrice,
-        recommendedPrice,
-        premiumPrice,
-        recommendedProfit,
+        item,
+        filament,
+        cost,
       };
-    }, [
-      parsed,
-      matchedPrinter,
-      preparedFilaments,
-      unmatchedFilaments.length,
-      margins,
-    ]);
+    });
+
+    const filamentCost = filamentCosts.reduce(
+      (sum, item) => sum + item.cost,
+      0,
+    );
+
+    const machineHours = hoursFromSeconds(parsed.totalEstimatedTimeSeconds);
+
+    const machineCost = machineHours * matchedPrinter.costPerHour;
+
+    const totalCost = filamentCost + machineCost + laborCost;
+
+    const minimumPrice =
+      margins.minimum >= 100 ? 0 : totalCost / (1 - margins.minimum / 100);
+
+    const recommendedPrice =
+      margins.recommended >= 100
+        ? 0
+        : totalCost / (1 - margins.recommended / 100);
+
+    const premiumPrice =
+      margins.premium >= 100 ? 0 : totalCost / (1 - margins.premium / 100);
+
+    const recommendedProfit = recommendedPrice - totalCost;
+
+    return {
+      filamentCosts,
+      machineCost,
+      laborCost,
+      filamentCost,
+      totalCost,
+      minimumPrice,
+      recommendedPrice,
+      premiumPrice,
+      recommendedProfit,
+    };
+  }, [
+    parsed,
+    matchedPrinter,
+    preparedFilaments,
+    unmatchedFilaments.length,
+    margins,
+    laborCost,
+  ]);
 
   const processFile = useCallback(
     async (file: File) => {
       setError("");
 
-      const extension =
-        file.name
-          .split(".")
-          .pop()
-          ?.toLowerCase();
+      const extension = file.name.split(".").pop()?.toLowerCase();
 
       if (extension !== "gcode") {
         setError(
@@ -792,47 +696,26 @@ export default function CalculosPage() {
           !text.includes("total filament weight") ||
           !text.includes("printer_model")
         ) {
-          throw new Error(
-            "G-code incompatível",
-          );
+          throw new Error("G-code incompatível");
         }
 
-        const data = parseGCode(
-          text,
-          file.name,
-        );
+        const data = parseGCode(text, file.name);
 
-        if (
-          !data.totalEstimatedTimeSeconds &&
-          !data.modelPrintTimeSeconds
-        ) {
-          throw new Error(
-            "Tempo de impressão não encontrado",
-          );
+        if (!data.totalEstimatedTimeSeconds && !data.modelPrintTimeSeconds) {
+          throw new Error("Tempo de impressão não encontrado");
         }
 
         if (data.filamentGrams <= 0) {
-          throw new Error(
-            "Consumo de filamento não encontrado",
-          );
+          throw new Error("Consumo de filamento não encontrado");
         }
 
         setParsed(data);
 
-        const printer =
-          findMatchingPrinter(
-            data.printerName,
-            printers,
-          );
+        const printer = findMatchingPrinter(data.printerName, printers);
 
-        setSelectedPrinterId(
-          printer?.id || "",
-        );
+        setSelectedPrinterId(printer?.id || "");
       } catch (err) {
-        console.error(
-          "Erro ao analisar G-code:",
-          err,
-        );
+        console.error("Erro ao analisar G-code:", err);
 
         setError(
           "Não foi possível analisar este G-code. Exporte o G-code diretamente pelo Bambu Studio após clicar em Slice Plate.",
@@ -844,25 +727,19 @@ export default function CalculosPage() {
     [printers],
   );
 
-  function handleFileChange(
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) {
-    const file =
-      event.target.files?.[0];
+  function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
 
     if (file) {
       void processFile(file);
     }
   }
 
-  function handleDrop(
-    event: React.DragEvent<HTMLDivElement>,
-  ) {
+  function handleDrop(event: React.DragEvent<HTMLDivElement>) {
     event.preventDefault();
     setDragActive(false);
 
-    const file =
-      event.dataTransfer.files?.[0];
+    const file = event.dataTransfer.files?.[0];
 
     if (file) {
       void processFile(file);
@@ -874,16 +751,14 @@ export default function CalculosPage() {
     setSelectedPrinterId("");
     setError("");
     setMargins(DEFAULT_MARGINS);
+    setLaborCost(0);
 
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
   }
 
-  function updateFilament(
-    itemIndex: number,
-    filamentId: string,
-  ) {
+  function updateFilament(itemIndex: number, filamentId: string) {
     setParsed((current) => {
       if (!current) {
         return current;
@@ -891,17 +766,14 @@ export default function CalculosPage() {
 
       return {
         ...current,
-        filaments:
-          current.filaments.map(
-            (filament) =>
-              filament.index === itemIndex
-                ? {
-                    ...filament,
-                    matchedFilamentId:
-                      filamentId,
-                  }
-                : filament,
-          ),
+        filaments: current.filaments.map((filament) =>
+          filament.index === itemIndex
+            ? {
+                ...filament,
+                matchedFilamentId: filamentId,
+              }
+            : filament,
+        ),
       };
     });
   }
@@ -938,9 +810,7 @@ export default function CalculosPage() {
             </h1>
 
             <p className="mt-1 max-w-2xl text-sm text-white/40">
-              Transforme os dados do
-              fatiamento em custo real e preço
-              de venda.
+              Transforme os dados do fatiamento em custo real e preço de venda.
             </p>
           </div>
 
@@ -962,19 +832,11 @@ export default function CalculosPage() {
             loading={loadingFile}
             error={error}
             inputRef={fileInputRef}
-            onDragEnter={() =>
-              setDragActive(true)
-            }
-            onDragLeave={() =>
-              setDragActive(false)
-            }
-            onDragOver={(event) =>
-              event.preventDefault()
-            }
+            onDragEnter={() => setDragActive(true)}
+            onDragLeave={() => setDragActive(false)}
+            onDragOver={(event) => event.preventDefault()}
             onDrop={handleDrop}
-            onSelect={() =>
-              fileInputRef.current?.click()
-            }
+            onSelect={() => fileInputRef.current?.click()}
             onChange={handleFileChange}
           />
         ) : (
@@ -1000,8 +862,8 @@ export default function CalculosPage() {
                       </div>
 
                       <p className="mt-1 text-xs text-white/35">
-                        Dados extraídos diretamente do
-                        fatiamento do Bambu Studio
+                        Dados extraídos diretamente do fatiamento do Bambu
+                        Studio
                       </p>
                     </div>
                   </div>
@@ -1009,36 +871,27 @@ export default function CalculosPage() {
                   <div className="grid grid-cols-2 border-t border-white/10 sm:grid-cols-4 lg:w-[620px] lg:border-l lg:border-t-0">
                     <CompactMetric
                       label="Tempo total"
-                      value={formatDuration(
-                        parsed.totalEstimatedTimeSeconds,
-                      )}
+                      value={formatDuration(parsed.totalEstimatedTimeSeconds)}
                       accent
                     />
 
                     <CompactMetric
                       label="Filamento"
-                      value={`${parsed.filamentGrams.toFixed(
-                        2,
-                      )} g`}
+                      value={`${parsed.filamentGrams.toFixed(2)} g`}
                     />
 
                     <CompactMetric
                       label="Camadas"
                       value={
                         parsed.layers
-                          ? parsed.layers.toLocaleString(
-                              "pt-BR",
-                            )
+                          ? parsed.layers.toLocaleString("pt-BR")
                           : "—"
                       }
                     />
 
                     <CompactMetric
                       label="Impressora"
-                      value={
-                        parsed.printerName ||
-                        "Não identificada"
-                      }
+                      value={parsed.printerName || "Não identificada"}
                     />
                   </div>
                 </div>
@@ -1061,65 +914,45 @@ export default function CalculosPage() {
                     <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-white/10 bg-white/10 sm:grid-cols-4">
                       <AnalysisMetric
                         label="Tempo total"
-                        value={formatDuration(
-                          parsed.totalEstimatedTimeSeconds,
-                        )}
+                        value={formatDuration(parsed.totalEstimatedTimeSeconds)}
                         accent
                       />
 
                       <AnalysisMetric
                         label="Tempo do modelo"
-                        value={formatDuration(
-                          parsed.modelPrintTimeSeconds,
-                        )}
+                        value={formatDuration(parsed.modelPrintTimeSeconds)}
                       />
 
                       <AnalysisMetric
                         label="Peso total"
-                        value={`${parsed.filamentGrams.toFixed(
-                          2,
-                        )} g`}
+                        value={`${parsed.filamentGrams.toFixed(2)} g`}
                       />
 
                       <AnalysisMetric
                         label="Filamento"
-                        value={`${parsed.filamentMeters.toFixed(
-                          2,
-                        )} m`}
+                        value={`${parsed.filamentMeters.toFixed(2)} m`}
                       />
                     </div>
 
                     <div className="mt-5 grid gap-x-8 gap-y-4 border-t border-white/10 pt-5 sm:grid-cols-2">
                       <DetailRow
                         label="Impressora"
-                        value={
-                          parsed.printerName ||
-                          "Não identificada"
-                        }
+                        value={parsed.printerName || "Não identificada"}
                       />
 
                       <DetailRow
                         label="Perfil"
-                        value={
-                          parsed.printerSettingsId ||
-                          "Não identificado"
-                        }
+                        value={parsed.printerSettingsId || "Não identificado"}
                       />
 
                       <DetailRow
                         label="Material"
-                        value={
-                          parsed.material ||
-                          "Não identificado"
-                        }
+                        value={parsed.material || "Não identificado"}
                       />
 
                       <DetailRow
                         label="Fabricante"
-                        value={
-                          parsed.vendor ||
-                          "Não identificado"
-                        }
+                        value={parsed.vendor || "Não identificado"}
                       />
                     </div>
                   </CardContent>
@@ -1143,28 +976,21 @@ export default function CalculosPage() {
 
                   <CardContent className="p-0">
                     <div className="divide-y divide-white/5">
-                      {preparedFilaments.map(
-                        (item) => (
-                          <FilamentRow
-                            key={`${item.index}-${item.color}`}
-                            item={item}
-                            filaments={filaments}
-                            onSelect={(filamentId) =>
-                              updateFilament(
-                                item.index,
-                                filamentId,
-                              )
-                            }
-                          />
-                        ),
-                      )}
+                      {preparedFilaments.map((item) => (
+                        <FilamentRow
+                          key={`${item.index}-${item.color}`}
+                          item={item}
+                          filaments={filaments}
+                          onSelect={(filamentId) =>
+                            updateFilament(item.index, filamentId)
+                          }
+                        />
+                      ))}
                     </div>
 
-                    {preparedFilaments.length ===
-                      0 && (
+                    {preparedFilaments.length === 0 && (
                       <div className="p-8 text-center text-sm text-white/35">
-                        Nenhum filamento foi
-                        identificado no G-code.
+                        Nenhum filamento foi identificado no G-code.
                       </div>
                     )}
                   </CardContent>
@@ -1182,19 +1008,15 @@ export default function CalculosPage() {
                     <Select
                       label="Impressora utilizada"
                       placeholder="Selecione a impressora..."
-                      options={printers.map(
-                        (printer) => ({
-                          value: printer.id,
-                          label: `${printer.name} • ${formatCurrency(
-                            printer.costPerHour,
-                          )}/h`,
-                        }),
-                      )}
+                      options={printers.map((printer) => ({
+                        value: printer.id,
+                        label: `${printer.name} • ${formatCurrency(
+                          printer.costPerHour,
+                        )}/h`,
+                      }))}
                       value={selectedPrinterId}
                       onChange={(event) =>
-                        setSelectedPrinterId(
-                          event.target.value,
-                        )
+                        setSelectedPrinterId(event.target.value)
                       }
                       className="border-white/10 bg-white/5 text-white"
                     />
@@ -1218,9 +1040,7 @@ export default function CalculosPage() {
                         </div>
 
                         <span className="text-sm font-semibold text-emerald-400">
-                          {formatCurrency(
-                            matchedPrinter.costPerHour,
-                          )}
+                          {formatCurrency(matchedPrinter.costPerHour)}
                           /h
                         </span>
                       </div>
@@ -1282,26 +1102,45 @@ export default function CalculosPage() {
                       <>
                         <div className="mt-6">
                           <span className="text-4xl font-semibold tracking-tight text-white sm:text-5xl">
-                            {formatCurrency(
-                              result.totalCost,
-                            )}
+                            {formatCurrency(result.totalCost)}
                           </span>
                         </div>
 
-                        <div className="mt-6 space-y-3 border-t border-white/10 pt-5">
+                        <div className="mt-6 space-y-4 border-t border-white/10 pt-5">
                           <CostRow
                             label="Filamentos"
-                            value={
-                              result.filamentCost
-                            }
+                            value={result.filamentCost}
                           />
 
-                          <CostRow
-                            label="Máquina"
-                            value={
-                              result.machineCost
-                            }
-                          />
+                          <CostRow label="Máquina" value={result.machineCost} />
+
+                          <div className="space-y-2">
+                            <label
+                              htmlFor="labor-cost"
+                              className="text-xs font-medium text-white/60"
+                            >
+                              Mão de obra / acabamento
+                            </label>
+
+                            <div className="relative">
+                              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-white/40">
+                                R$
+                              </span>
+
+                              <input
+                                id="labor-cost"
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={laborCost || ""}
+                                onChange={(event) =>
+                                  setLaborCost(Number(event.target.value) || 0)
+                                }
+                                placeholder="0,00"
+                                className="w-full rounded-xl border border-white/10 bg-white/[0.03] py-2.5 pl-10 pr-3 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-[var(--accent)]/50 focus:bg-white/[0.05]"
+                              />
+                            </div>
+                          </div>
 
                           <CostRow
                             label="Tempo cobrado"
@@ -1329,12 +1168,10 @@ export default function CalculosPage() {
                         label="Mínimo"
                         value={margins.minimum}
                         onChange={(value) =>
-                          setMargins(
-                            (current) => ({
-                              ...current,
-                              minimum: value,
-                            }),
-                          )
+                          setMargins((current) => ({
+                            ...current,
+                            minimum: value,
+                          }))
                         }
                       />
 
@@ -1342,12 +1179,10 @@ export default function CalculosPage() {
                         label="Recomendado"
                         value={margins.recommended}
                         onChange={(value) =>
-                          setMargins(
-                            (current) => ({
-                              ...current,
-                              recommended: value,
-                            }),
-                          )
+                          setMargins((current) => ({
+                            ...current,
+                            recommended: value,
+                          }))
                         }
                       />
 
@@ -1355,12 +1190,10 @@ export default function CalculosPage() {
                         label="Premium"
                         value={margins.premium}
                         onChange={(value) =>
-                          setMargins(
-                            (current) => ({
-                              ...current,
-                              premium: value,
-                            }),
-                          )
+                          setMargins((current) => ({
+                            ...current,
+                            premium: value,
+                          }))
                         }
                       />
                     </div>
@@ -1369,31 +1202,26 @@ export default function CalculosPage() {
                       <div className="mt-5 space-y-2">
                         <PriceOption
                           label={`Mínimo • ${margins.minimum}%`}
-                          price={
-                            result.minimumPrice
-                          }
+                          price={result.minimumPrice}
                         />
 
                         <PriceOption
                           label={`Recomendado • ${margins.recommended}%`}
-                          price={
-                            result.recommendedPrice
-                          }
+                          price={result.recommendedPrice}
                           featured
+                          
                         />
 
                         <PriceOption
                           label={`Premium • ${margins.premium}%`}
-                          price={
-                            result.premiumPrice
-                          }
+                          price={result.premiumPrice}
+                          
                         />
                       </div>
                     ) : (
                       <div className="mt-5 rounded-xl border border-white/5 bg-white/[0.02] p-4 text-center">
                         <p className="text-xs text-white/30">
-                          O preço aparecerá quando
-                          o custo da impressão estiver
+                          O preço aparecerá quando o custo da impressão estiver
                           completo.
                         </p>
                       </div>
@@ -1414,9 +1242,7 @@ export default function CalculosPage() {
                           </p>
 
                           <p className="mt-2 text-2xl font-semibold text-white">
-                            {formatCurrency(
-                              result.recommendedPrice,
-                            )}
+                            {formatCurrency(result.recommendedPrice)}
                           </p>
                         </div>
 
@@ -1426,14 +1252,10 @@ export default function CalculosPage() {
                       </div>
 
                       <div className="mt-4 flex items-center justify-between border-t border-white/10 pt-4">
-                        <span className="text-xs text-white/35">
-                          Lucro
-                        </span>
+                        <span className="text-xs text-white/35">Lucro</span>
 
                         <span className="text-sm font-semibold accent-text">
-                          {formatCurrency(
-                            result.recommendedProfit,
-                          )}
+                          {formatCurrency(result.recommendedProfit)}
                         </span>
                       </div>
                     </div>
@@ -1452,15 +1274,13 @@ export default function CalculosPage() {
                         </p>
 
                         <p className="mt-1 text-xs leading-5 text-white/40">
-                          {unmatchedFilaments.length ===
-                          1
+                          {unmatchedFilaments.length === 1
                             ? "Existe 1 filamento utilizado que ainda não foi associado ao estoque."
                             : `Existem ${unmatchedFilaments.length} filamentos utilizados que ainda não foram associados ao estoque.`}
                         </p>
 
                         <p className="mt-2 text-[11px] text-amber-400/80">
-                          Selecione o filamento
-                          correspondente na lista acima.
+                          Selecione o filamento correspondente na lista acima.
                         </p>
                       </div>
                     </div>
@@ -1493,16 +1313,10 @@ function UploadArea({
   inputRef: React.Ref<HTMLInputElement>;
   onDragEnter: () => void;
   onDragLeave: () => void;
-  onDragOver: (
-    event: React.DragEvent<HTMLDivElement>,
-  ) => void;
-  onDrop: (
-    event: React.DragEvent<HTMLDivElement>,
-  ) => void;
+  onDragOver: (event: React.DragEvent<HTMLDivElement>) => void;
+  onDrop: (event: React.DragEvent<HTMLDivElement>) => void;
   onSelect: () => void;
-  onChange: (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => void;
+  onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
 }) {
   return (
     <div className="mx-auto w-full max-w-6xl pt-4">
@@ -1616,13 +1430,8 @@ function UploadArea({
             <div className="mt-6 rounded-xl border border-white/5 bg-white/[0.02] px-4 py-3">
               <p className="text-[11px] leading-5 text-white/25">
                 No Bambu Studio:{" "}
-                <span className="text-white/45">
-                  Slice Plate
-                </span>{" "}
-                →{" "}
-                <span className="text-white/45">
-                  Export G-code
-                </span>
+                <span className="text-white/45">Slice Plate</span> →{" "}
+                <span className="text-white/45">Export G-code</span>
               </p>
             </div>
           </div>
@@ -1633,9 +1442,7 @@ function UploadArea({
         <div className="mt-4 flex items-start gap-3 rounded-xl border border-red-400/15 bg-red-400/5 px-4 py-3">
           <X className="mt-0.5 h-4 w-4 shrink-0 text-red-400" />
 
-          <p className="text-sm text-red-300">
-            {error}
-          </p>
+          <p className="text-sm text-red-300">{error}</p>
         </div>
       )}
     </div>
@@ -1658,9 +1465,7 @@ function UploadFeature({
       </div>
 
       <div className="min-w-0">
-        <p className="text-xs font-medium text-white/75">
-          {title}
-        </p>
+        <p className="text-xs font-medium text-white/75">{title}</p>
 
         <p className="mt-0.5 truncate text-[10px] text-white/25">
           {description}
@@ -1756,18 +1561,10 @@ function AnalysisMetric({
   );
 }
 
-function DetailRow({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
+function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-4 text-sm">
-      <span className="text-white/30">
-        {label}
-      </span>
+      <span className="text-white/30">{label}</span>
 
       <span className="max-w-[65%] truncate text-right font-medium text-white/75">
         {value}
@@ -1796,9 +1593,7 @@ function FilamentRow({
             style={{
               backgroundColor:
                 item.colorHex ||
-                DEFAULT_COLOR_MAP[
-                  normalizeText(item.color)
-                ] ||
+                DEFAULT_COLOR_MAP[normalizeText(item.color)] ||
                 "#666",
             }}
           >
@@ -1807,21 +1602,14 @@ function FilamentRow({
 
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <p className="font-medium text-white">
-                {item.color}
-              </p>
+              <p className="font-medium text-white">{item.color}</p>
 
-              {matched && (
-                <Check className="h-3.5 w-3.5 text-emerald-400" />
-              )}
+              {matched && <Check className="h-3.5 w-3.5 text-emerald-400" />}
             </div>
 
             <p className="mt-1 text-xs text-white/30">
-              {item.material ||
-                "Material não identificado"}
-              {item.vendor
-                ? ` • ${item.vendor}`
-                : ""}
+              {item.material || "Material não identificado"}
+              {item.vendor ? ` • ${item.vendor}` : ""}
             </p>
           </div>
         </div>
@@ -1852,26 +1640,16 @@ function FilamentRow({
           <Select
             label="Filamento no estoque"
             placeholder="Selecionar..."
-            options={filaments.map(
-              (filament) => ({
-                value: filament.id,
-                label: `${filament.name} • ${formatCurrency(
-                  filament.costPerKg,
-                )}/kg`,
-              }),
-            )}
-            value={
-              matched?.id ||
-              item.matchedFilamentId ||
-              ""
-            }
-            onChange={(event) =>
-              onSelect(event.target.value)
-            }
+            options={filaments.map((filament) => ({
+              value: filament.id,
+              label: `${filament.name} • ${formatCurrency(
+                filament.costPerKg,
+              )}/kg`,
+            }))}
+            value={matched?.id || item.matchedFilamentId || ""}
+            onChange={(event) => onSelect(event.target.value)}
             className={`border-white/10 bg-white/5 text-white ${
-              matched
-                ? "border-emerald-400/15"
-                : ""
+              matched ? "border-emerald-400/15" : ""
             }`}
           />
         </div>
@@ -1881,9 +1659,7 @@ function FilamentRow({
         {matched ? (
           <>
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-            <span className="text-emerald-400/80">
-              Associado ao estoque
-            </span>
+            <span className="text-emerald-400/80">Associado ao estoque</span>
           </>
         ) : (
           <>
@@ -1898,18 +1674,12 @@ function FilamentRow({
   );
 }
 
-function EmptyCalculationState({
-  reason,
-}: {
-  reason: string;
-}) {
+function EmptyCalculationState({ reason }: { reason: string }) {
   return (
     <div className="mt-5 rounded-xl border border-white/5 bg-white/[0.02] p-5 text-center">
       <Calculator className="mx-auto h-6 w-6 text-white/15" />
 
-      <p className="mt-3 text-xs leading-5 text-white/30">
-        {reason}
-      </p>
+      <p className="mt-3 text-xs leading-5 text-white/30">{reason}</p>
     </div>
   );
 }
@@ -1929,9 +1699,7 @@ function CostRow({
     <div className="flex items-center justify-between gap-4">
       <span
         className={
-          bold
-            ? "text-sm font-semibold text-white"
-            : "text-xs text-white/40"
+          bold ? "text-sm font-semibold text-white" : "text-xs text-white/40"
         }
       >
         {label}
@@ -1944,10 +1712,7 @@ function CostRow({
             : "text-xs font-medium text-white/70"
         }
       >
-        {valueText ??
-          (typeof value === "number"
-            ? formatCurrency(value)
-            : "—")}
+        {valueText ?? (typeof value === "number" ? formatCurrency(value) : "—")}
       </span>
     </div>
   );
@@ -1975,11 +1740,7 @@ function MarginInput({
           max="99"
           step="1"
           value={value}
-          onChange={(event) =>
-            onChange(
-              Number(event.target.value) || 0,
-            )
-          }
+          onChange={(event) => onChange(Number(event.target.value) || 0)}
           className="h-10 w-full rounded-lg border border-white/10 bg-white/[0.035] px-3 pr-7 text-sm font-medium text-white outline-none transition focus:border-[var(--accent)] focus:bg-white/[0.05]"
         />
 
@@ -1995,38 +1756,43 @@ function PriceOption({
   label,
   price,
   featured,
-}: {
+  }: {
   label: string;
   price: number;
   featured?: boolean;
+  
 }) {
   return (
     <div
-      className={`flex items-center justify-between rounded-xl border px-4 py-3.5 transition ${
+      className={`rounded-xl border px-4 py-3.5 transition ${
         featured
           ? "border-[var(--accent)]/25 bg-[var(--accent)]/[0.055]"
           : "border-white/5 bg-white/[0.02]"
       }`}
     >
-      <span
-        className={
-          featured
-            ? "text-xs font-medium text-white"
-            : "text-xs text-white/40"
-        }
-      >
-        {label}
-      </span>
+      <div className="flex items-center justify-between gap-3">
+        <span
+          className={
+            featured
+              ? "text-xs font-medium text-white"
+              : "text-xs text-white/40"
+          }
+        >
+          {label}
+        </span>
 
-      <span
-        className={
-          featured
-            ? "text-base font-bold accent-text"
-            : "text-sm font-medium text-white/75"
-        }
-      >
-        {formatCurrency(price)}
-      </span>
+        <span
+          className={
+            featured
+              ? "text-base font-bold accent-text"
+              : "text-sm font-medium text-white/75"
+          }
+        >
+          {formatCurrency(price)}
+        </span>
+      </div>
+
+      
     </div>
   );
 }

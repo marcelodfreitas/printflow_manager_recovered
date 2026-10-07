@@ -61,6 +61,9 @@ export interface Product {
   name: string;
   description?: string;
   price: number;
+  printTimeMinutes: number;
+  filamentGrams: number;
+  productUrl?: string;
   createdAt: string;
 }
 
