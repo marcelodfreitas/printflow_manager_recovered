@@ -107,23 +107,29 @@ export default function DashboardPage() {
   const primaryPrinter =
     printers.find((printer) => printer.isPrimary) ?? null;
 
-  const deliveredOrders = orders.filter(
-    (order) => order.status === "delivered",
-  );
-
-  const currentMonthOrders = deliveredOrders.filter((order) =>
+  const currentMonthOrders = orders.filter(
+  (order) =>
+    order.status !== "cancelled" &&
+    order.status !== "pending" &&
     isCurrentMonth(order.createdAt),
-  );
+);
 
-  const monthlyRevenue = currentMonthOrders.reduce(
-    (sum, order) => sum + order.price,
-    0,
-  );
+const deliveredMonthOrders = orders.filter(
+  (order) =>
+    order.status === "delivered" &&
+    isCurrentMonth(order.createdAt),
+);
 
-  const monthlyProfit = currentMonthOrders.reduce(
-    (sum, order) => sum + (order.price - order.cost),
-    0,
-  );
+const monthlyRevenue = currentMonthOrders.reduce(
+  (sum, order) => sum + (order.price || 0),
+  0,
+);
+
+const monthlyProfit = deliveredMonthOrders.reduce(
+  (sum, order) =>
+    sum + ((order.price || 0) - (order.cost || 0)),
+  0,
+);
 
   const pendingOrders = orders.filter(
     (order) =>

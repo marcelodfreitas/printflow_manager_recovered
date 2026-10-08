@@ -970,22 +970,43 @@ export default function OrdersPage() {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <Select
-                id="product"
-                label="Produto"
-                options={products.map((p) => ({
-                  value: p.id,
-                  label: p.name,
-                }))}
-                value={form.productId}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    productId: e.target.value,
-                  })
-                }
-                required
-                className="border-white/10 bg-white/[0.04] text-white focus:border-[rgba(var(--accent-rgb),0.45)] focus:ring-[rgba(var(--accent-rgb),0.15)]"
-              />
+  id="product"
+  label="Produto"
+  options={products.map((p) => ({
+    value: p.id,
+    label: p.name,
+  }))}
+  value={form.productId}
+  onChange={(e) => {
+    const productId = e.target.value;
+
+    const selectedProduct = products.find(
+      (p) => p.id === productId,
+    );
+
+    setForm({
+      ...form,
+      productId,
+      totalHours: selectedProduct
+        ? String(
+            Number(
+              (
+                selectedProduct.printTimeMinutes / 60
+              ).toFixed(2),
+            ),
+          )
+        : "",
+      filamentGrams: selectedProduct
+        ? String(selectedProduct.filamentGrams)
+        : "",
+      price: selectedProduct
+        ? String(selectedProduct.price)
+        : "",
+    });
+  }}
+  required
+  className="border-white/10 bg-white/[0.04] text-white focus:border-[rgba(var(--accent-rgb),0.45)] focus:ring-[rgba(var(--accent-rgb),0.15)]"
+/>
 
               <Select
                 id="client"
