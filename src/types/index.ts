@@ -23,6 +23,7 @@ export interface Client {
   createdAt: string;
 }
 
+
 export interface Printer {
   id: string;
   name: string;
@@ -38,7 +39,15 @@ export interface Printer {
   powerConsumption?: number;
   costPerHour: number;
   purchasePrice?: number;
+  usefulLifeHours?: number;
+  maintenanceCostPerHour?: number;
+
+  // Localização e custo de energia
+  cep?: string;
+  energyRate?: number;
+  energyRateSource?: "automatic" | "manual";
 }
+
 
 export interface Filament {
   id: string;

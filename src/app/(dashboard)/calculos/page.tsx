@@ -16,6 +16,7 @@ import {
   Upload,
   Weight,
   X,
+  Clock,
 } from "lucide-react";
 
 import Button from "@/components/ui/Button";
@@ -72,6 +73,7 @@ interface CalculationResult {
 
   machineCost: number;
   laborCost: number;
+  packagingCost: number;
   filamentCost: number;
   totalCost: number;
 
@@ -563,7 +565,6 @@ function parseGCode(text: string, fileName: string): ParsedGCode {
 }
 
 export default function CalculosPage() {
-  
   const { filaments, loading: loadingFilaments } = useFilaments();
 
   const { printers, loading: loadingPrinters } = usePrinters();
@@ -582,7 +583,24 @@ export default function CalculosPage() {
 
   const [margins, setMargins] = useState(DEFAULT_MARGINS);
 
-  const [laborCost, setLaborCost] = useState(0);
+  const [laborRate, setLaborRate] = useState(31.25);
+
+  const [laborTimes, setLaborTimes] = useState({
+    preparation: 10,
+    removal: 5,
+    finishing: 10,
+    packaging: 5,
+    activeMonitoring: 0,
+  });
+
+  const [packagingCost, setPackagingCost] = useState(0);
+
+  const totalLaborMinutes = Object.values(laborTimes).reduce(
+    (total, minutes) => total + Math.max(0, minutes),
+    0,
+  );
+
+  const laborCost = (totalLaborMinutes / 60) * Math.max(0, laborRate);
 
   const loading = loadingFilaments || loadingPrinters;
 
@@ -639,7 +657,7 @@ export default function CalculosPage() {
 
     const machineCost = machineHours * matchedPrinter.costPerHour;
 
-    const totalCost = filamentCost + machineCost + laborCost;
+    const totalCost = filamentCost + machineCost + laborCost + packagingCost;
 
     const minimumPrice =
       margins.minimum >= 100 ? 0 : totalCost / (1 - margins.minimum / 100);
@@ -664,6 +682,7 @@ export default function CalculosPage() {
       recommendedPrice,
       premiumPrice,
       recommendedProfit,
+      packagingCost,
     };
   }, [
     parsed,
@@ -672,6 +691,7 @@ export default function CalculosPage() {
     unmatchedFilaments.length,
     margins,
     laborCost,
+    packagingCost,
   ]);
 
   const processFile = useCallback(
@@ -751,7 +771,17 @@ export default function CalculosPage() {
     setSelectedPrinterId("");
     setError("");
     setMargins(DEFAULT_MARGINS);
-    setLaborCost(0);
+    setLaborRate(31.25);
+
+    setLaborTimes({
+      preparation: 10,
+      removal: 5,
+      finishing: 10,
+      packaging: 5,
+      activeMonitoring: 0,
+    });
+
+    setPackagingCost(0);
 
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -1114,12 +1144,144 @@ export default function CalculosPage() {
 
                           <CostRow label="Máquina" value={result.machineCost} />
 
+                          <div className="space-y-4 rounded-xl border border-white/10 bg-white/[0.02] p-3">
+                            <div className="flex items-center gap-2">
+                              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--accent)]/10">
+                                <Clock className="h-4 w-4 accent-text" />
+                              </div>
+
+                              <div>
+                                <p className="text-xs font-semibold text-white">
+                                  Tempo de mão de obra
+                                </p>
+                                <p className="text-[10px] text-white/35">
+                                  Informe apenas o tempo de trabalho ativo.
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="divide-y divide-white/5">
+                              <LaborTimeInput
+                                label="Preparação e fatiamento"
+                                description="Preparar arquivo e máquina"
+                                value={laborTimes.preparation}
+                                onChange={(value) =>
+                                  setLaborTimes((current) => ({
+                                    ...current,
+                                    preparation: value,
+                                  }))
+                                }
+                              />
+
+                              <LaborTimeInput
+                                label="Retirada da peça"
+                                description="Remover a peça da mesa"
+                                value={laborTimes.removal}
+                                onChange={(value) =>
+                                  setLaborTimes((current) => ({
+                                    ...current,
+                                    removal: value,
+                                  }))
+                                }
+                              />
+
+                              <LaborTimeInput
+                                label="Acabamento"
+                                description="Remover suportes, limpar ou lixar"
+                                value={laborTimes.finishing}
+                                onChange={(value) =>
+                                  setLaborTimes((current) => ({
+                                    ...current,
+                                    finishing: value,
+                                  }))
+                                }
+                              />
+
+                              <LaborTimeInput
+                                label="Embalagem"
+                                description="Tempo gasto preparando o pedido"
+                                value={laborTimes.packaging}
+                                onChange={(value) =>
+                                  setLaborTimes((current) => ({
+                                    ...current,
+                                    packaging: value,
+                                  }))
+                                }
+                              />
+
+                              <LaborTimeInput
+                                label="Acompanhamento ativo"
+                                description="Intervenções durante a impressão"
+                                value={laborTimes.activeMonitoring}
+                                onChange={(value) =>
+                                  setLaborTimes((current) => ({
+                                    ...current,
+                                    activeMonitoring: value,
+                                  }))
+                                }
+                              />
+                            </div>
+
+                            <div>
+                              <label
+                                htmlFor="labor-rate"
+                                className="text-xs font-medium text-white/60"
+                              >
+                                Valor da hora de trabalho
+                              </label>
+
+                              <div className="relative mt-2">
+                                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-white/40">
+                                  R$
+                                </span>
+
+                                <input
+                                  id="labor-rate"
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  value={laborRate}
+                                  onChange={(event) =>
+                                    setLaborRate(
+                                      Math.max(
+                                        0,
+                                        Number(event.target.value) || 0,
+                                      ),
+                                    )
+                                  }
+                                  className="w-full rounded-xl border border-white/10 bg-white/[0.03] py-2.5 pl-10 pr-3 text-sm text-white outline-none transition focus:border-[var(--accent)]/50"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="rounded-lg border border-[var(--accent)]/15 bg-[var(--accent)]/[0.05] p-3">
+                              <div className="flex items-center justify-between gap-3">
+                                <span className="text-xs text-white/50">
+                                  Tempo manual total
+                                </span>
+                                <span className="text-xs font-medium text-white">
+                                  {Math.floor(totalLaborMinutes / 60)}h{" "}
+                                  {totalLaborMinutes % 60}min
+                                </span>
+                              </div>
+
+                              <div className="mt-2 flex items-center justify-between gap-3">
+                                <span className="text-xs text-white/50">
+                                  Custo calculado
+                                </span>
+                                <span className="text-base font-semibold accent-text">
+                                  {formatCurrency(laborCost)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
                           <div className="space-y-2">
                             <label
-                              htmlFor="labor-cost"
+                              htmlFor="packaging-cost"
                               className="text-xs font-medium text-white/60"
                             >
-                              Mão de obra / acabamento
+                              Custo de embalagem
                             </label>
 
                             <div className="relative">
@@ -1128,25 +1290,46 @@ export default function CalculosPage() {
                               </span>
 
                               <input
-                                id="labor-cost"
+                                id="packaging-cost"
                                 type="number"
                                 min="0"
                                 step="0.01"
-                                value={laborCost || ""}
+                                value={packagingCost || ""}
                                 onChange={(event) =>
-                                  setLaborCost(Number(event.target.value) || 0)
+                                  setPackagingCost(
+                                    Math.max(
+                                      0,
+                                      Number(event.target.value) || 0,
+                                    ),
+                                  )
                                 }
                                 placeholder="0,00"
                                 className="w-full rounded-xl border border-white/10 bg-white/[0.03] py-2.5 pl-10 pr-3 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-[var(--accent)]/50 focus:bg-white/[0.05]"
                               />
                             </div>
+
+                            <p className="text-[10px] text-white/30">
+                              Opcional. Deixe em branco se não houver embalagem.
+                            </p>
                           </div>
 
                           <CostRow
-                            label="Tempo cobrado"
+                            label="Embalagem"
+                            value={result.packagingCost}
+                          />
+
+                          <CostRow
+                            label="Tempo de impressão"
                             valueText={formatDuration(
                               parsed.totalEstimatedTimeSeconds,
                             )}
+                          />
+
+                          <CostRow
+                            label="Tempo de mão de obra"
+                            valueText={`${Math.floor(totalLaborMinutes / 60)}h ${String(
+                              totalLaborMinutes % 60,
+                            ).padStart(2, "0")}min`}
                           />
                         </div>
                       </>
@@ -1209,13 +1392,11 @@ export default function CalculosPage() {
                           label={`Recomendado • ${margins.recommended}%`}
                           price={result.recommendedPrice}
                           featured
-                          
                         />
 
                         <PriceOption
                           label={`Premium • ${margins.premium}%`}
                           price={result.premiumPrice}
-                          
                         />
                       </div>
                     ) : (
@@ -1638,7 +1819,7 @@ function FilamentRow({
 
         <div>
           <Select
-            label="Filamento no estoque"
+            label="Filamento"
             placeholder="Selecionar..."
             options={filaments.map((filament) => ({
               value: filament.id,
@@ -1680,6 +1861,46 @@ function EmptyCalculationState({ reason }: { reason: string }) {
       <Calculator className="mx-auto h-6 w-6 text-white/15" />
 
       <p className="mt-3 text-xs leading-5 text-white/30">{reason}</p>
+    </div>
+  );
+}
+
+function LaborTimeInput({
+  label,
+  description,
+  value,
+  onChange,
+}: {
+  label: string;
+  description: string;
+  value: number;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 py-2">
+      <div className="min-w-0">
+        <p className="text-xs font-medium text-white/75">{label}</p>
+        <p className="mt-1 text-[10px] leading-4 text-white/30">
+          {description}
+        </p>
+      </div>
+
+      <div className="relative w-[92px] shrink-0">
+        <input
+          type="number"
+          min="0"
+          step="1"
+          value={value}
+          onChange={(event) =>
+            onChange(Math.max(0, Number(event.target.value) || 0))
+          }
+          className="w-full rounded-lg border border-white/10 bg-white/[0.035] py-2 pl-3 pr-9 text-sm text-white outline-none transition focus:border-[var(--accent)]/50"
+        />
+
+        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-white/30">
+          min
+        </span>
+      </div>
     </div>
   );
 }
@@ -1756,11 +1977,10 @@ function PriceOption({
   label,
   price,
   featured,
-  }: {
+}: {
   label: string;
   price: number;
   featured?: boolean;
-  
 }) {
   return (
     <div
@@ -1791,8 +2011,6 @@ function PriceOption({
           {formatCurrency(price)}
         </span>
       </div>
-
-      
     </div>
   );
 }
