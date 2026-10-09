@@ -74,6 +74,11 @@ export interface Product {
   filamentGrams: number;
   productUrl?: string;
   createdAt: string;
+  filamentCost: number;
+  energyCost: number;
+  laborCost: number;
+  packagingCost: number;
+  imageUrl?: string;
 }
 
 export type OrderStatus =

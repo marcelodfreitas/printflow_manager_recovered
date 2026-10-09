@@ -1,7 +1,19 @@
+
 "use client";
 
 import { useState } from "react";
-import { Plus, Search, Pencil, Trash2, ExternalLink } from "lucide-react";
+import {
+  Plus,
+  Search,
+  Pencil,
+  Trash2,
+  ExternalLink,
+  ImagePlus,
+  X,
+} from "lucide-react";
+
+import { createClient } from "@/lib/supabase/client";
+import { getUserId } from "@/lib/supabase/auth";
 
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
@@ -22,12 +34,25 @@ import type { Product } from "@/types";
 import { useProducts } from "@/hooks/useProducts";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+
+const ALLOWED_IMAGE_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+];
+
 export default function ProductsPage() {
   const { products, loading, create, update, remove } = useProducts();
+  const supabase = createClient();
 
   const [search, setSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState("");
+  const [imageUploading, setImageUploading] = useState(false);
 
   const [form, setForm] = useState({
     name: "",
@@ -37,15 +62,45 @@ export default function ProductsPage() {
     printTimeMinutes: "0",
     filamentGrams: "",
     productUrl: "",
+    filamentCost: "0",
+    energyCost: "0",
+    laborCost: "0",
+    packagingCost: "0",
+    imageUrl: "",
   });
 
+  const productionCost =
+    (Number(form.filamentCost) || 0) +
+    (Number(form.energyCost) || 0) +
+    (Number(form.laborCost) || 0) +
+    (Number(form.packagingCost) || 0);
+
+  const costFields = [
+    { key: "filamentCost", label: "Custo do filamento" },
+    { key: "energyCost", label: "Custo de energia" },
+    { key: "laborCost", label: "Custo de mão de obra" },
+    { key: "packagingCost", label: "Custo da embalagem" },
+  ] as const;
+
   const filtered = products.filter(
-    (p) =>
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      (p.description ?? "").toLowerCase().includes(search.toLowerCase()),
+    (product) =>
+      product.name.toLowerCase().includes(search.toLowerCase()) ||
+      (product.description ?? "")
+        .toLowerCase()
+        .includes(search.toLowerCase()),
   );
 
+  function resetImageState() {
+    if (imagePreview.startsWith("blob:")) {
+      URL.revokeObjectURL(imagePreview);
+    }
+
+    setImageFile(null);
+    setImagePreview("");
+  }
+
   function openCreate() {
+    resetImageState();
     setEditingProduct(null);
 
     setForm({
@@ -56,16 +111,20 @@ export default function ProductsPage() {
       printTimeMinutes: "0",
       filamentGrams: "",
       productUrl: "",
+      filamentCost: "0",
+      energyCost: "0",
+      laborCost: "0",
+      packagingCost: "0",
+      imageUrl: "",
     });
 
     setModalOpen(true);
   }
 
   function openEdit(product: Product) {
-    const totalMinutes = Number(product.printTimeMinutes ?? 0);
+    resetImageState();
 
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
+    const totalMinutes = Number(product.printTimeMinutes ?? 0);
 
     setEditingProduct(product);
 
@@ -73,45 +132,161 @@ export default function ProductsPage() {
       name: product.name,
       description: product.description || "",
       price: String(product.price ?? ""),
-      printTimeHours: String(hours),
-      printTimeMinutes: String(minutes),
+      printTimeHours: String(Math.floor(totalMinutes / 60)),
+      printTimeMinutes: String(totalMinutes % 60),
       filamentGrams: String(product.filamentGrams ?? ""),
       productUrl: product.productUrl || "",
+      filamentCost: String(product.filamentCost ?? 0),
+      energyCost: String(product.energyCost ?? 0),
+      laborCost: String(product.laborCost ?? 0),
+      packagingCost: String(product.packagingCost ?? 0),
+      imageUrl: product.imageUrl || "",
     });
 
+    setImagePreview(product.imageUrl || "");
     setModalOpen(true);
   }
 
-  async function handleSave(e: React.FormEvent) {
-    e.preventDefault();
+  function handleImageChange(file?: File) {
+    if (!file) return;
 
-    if (!form.name.trim()) return;
-
-    const hours = Math.max(0, Number(form.printTimeHours) || 0);
-
-    const minutes = Math.min(
-      59,
-      Math.max(0, Number(form.printTimeMinutes) || 0),
-    );
-
-    const printTimeMinutes = hours * 60 + minutes;
-
-    const data = {
-      name: form.name.trim(),
-      description: form.description.trim() || undefined,
-      price: Number(form.price) || 0,
-      printTimeMinutes,
-      filamentGrams: Math.max(0, Number(form.filamentGrams) || 0),
-      productUrl: form.productUrl.trim() || undefined,
-    };
-
-    if (editingProduct) {
-      await update(editingProduct.id, data);
-    } else {
-      await create(data);
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      alert("Escolha uma imagem JPG, PNG ou WebP.");
+      return;
     }
 
-    setModalOpen(false);
+    if (file.size > MAX_IMAGE_SIZE) {
+      alert("A imagem deve ter no máximo 5 MB.");
+      return;
+    }
+
+    if (imagePreview.startsWith("blob:")) {
+      URL.revokeObjectURL(imagePreview);
+    }
+
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  }
+
+  function clearImage() {
+    if (imagePreview.startsWith("blob:")) {
+      URL.revokeObjectURL(imagePreview);
+    }
+
+    setImageFile(null);
+    setImagePreview("");
+    setForm((previous) => ({ ...previous, imageUrl: "" }));
+  }
+
+  async function uploadProductImage(): Promise<string | undefined> {
+    // Mantém a imagem atual quando nenhuma nova foi selecionada.
+    if (!imageFile) {
+      return form.imageUrl || undefined;
+    }
+
+    const userId = await getUserId();
+
+    if (!userId) {
+      throw new Error(
+        "Não foi possível identificar o usuário autenticado.",
+      );
+    }
+
+    const extensionByType: Record<string, string> = {
+      "image/jpeg": "jpg",
+      "image/png": "png",
+      "image/webp": "webp",
+    };
+
+    const extension = extensionByType[imageFile.type];
+    const filePath = `${userId}/${crypto.randomUUID()}.${extension}`;
+
+    const { error } = await supabase.storage
+      .from("product-images")
+      .upload(filePath, imageFile, {
+        contentType: imageFile.type,
+        upsert: false,
+      });
+
+    if (error) {
+      throw error;
+    }
+
+    const { data } = supabase.storage
+      .from("product-images")
+      .getPublicUrl(filePath);
+
+    return data.publicUrl;
+  }
+
+  async function handleSave(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+
+    if (!form.name.trim() || imageUploading) return;
+
+    setImageUploading(true);
+
+    try {
+      const hours = Math.max(
+        0,
+        Math.floor(Number(form.printTimeHours) || 0),
+      );
+
+      const minutes = Math.min(
+        59,
+        Math.max(0, Math.floor(Number(form.printTimeMinutes) || 0)),
+      );
+
+      const printTimeMinutes = hours * 60 + minutes;
+
+      // Primeiro envia a imagem, depois salva sua URL no produto.
+      const imageUrl = await uploadProductImage();
+
+      const data = {
+        name: form.name.trim(),
+        description: form.description.trim() || undefined,
+        price: Math.max(0, Number(form.price) || 0),
+        printTimeMinutes,
+        filamentGrams: Math.max(
+          0,
+          Number(form.filamentGrams) || 0,
+        ),
+        productUrl: form.productUrl.trim() || undefined,
+        filamentCost: Math.max(
+          0,
+          Number(form.filamentCost) || 0,
+        ),
+        energyCost: Math.max(
+          0,
+          Number(form.energyCost) || 0,
+        ),
+        laborCost: Math.max(
+          0,
+          Number(form.laborCost) || 0,
+        ),
+        packagingCost: Math.max(
+          0,
+          Number(form.packagingCost) || 0,
+        ),
+        imageUrl,
+      };
+
+      if (editingProduct) {
+        await update(editingProduct.id, data);
+      } else {
+        await create(data);
+      }
+
+      resetImageState();
+      setModalOpen(false);
+    } catch (error) {
+      console.error("Erro ao salvar produto:", error);
+      alert(
+        "Não foi possível enviar a imagem ou salvar o produto. Verifique sua conexão e as permissões do Supabase.",
+      );
+    } finally {
+      setImageUploading(false);
+    }
   }
 
   function handleDelete(id: string) {
@@ -141,14 +316,39 @@ export default function ProductsPage() {
     return `${remainingMinutes}min`;
   }
 
+  function ProductImage({
+    product,
+    mobile = false,
+  }: {
+    product: Product;
+    mobile?: boolean;
+  }) {
+    return (
+      <div
+        className={`flex shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-white/[0.035] ${
+          mobile ? "h-12 w-12" : "h-12 w-12"
+        }`}
+      >
+        {product.imageUrl ? (
+          <img
+            src={product.imageUrl}
+            alt={`Imagem de ${product.name}`}
+            loading="lazy"
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <ImagePlus className="h-5 w-5 text-white/25" />
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="relative min-h-screen bg-[#050914]">
       {/* Background */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute -right-40 -top-40 h-[520px] w-[520px] rounded-full bg-[rgba(var(--accent-rgb),0.045)] blur-[140px]" />
-
         <div className="absolute -bottom-48 -left-40 h-[520px] w-[520px] rounded-full bg-[#071124]/80 blur-[140px]" />
-
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.035)_1px,transparent_0)] bg-[size:32px_32px]" />
       </div>
 
@@ -204,7 +404,6 @@ export default function ProductsPage() {
                     </p>
                   </div>
 
-                  {/* Search */}
                   <div className="relative w-full sm:max-w-xs">
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
 
@@ -228,27 +427,21 @@ export default function ProductsPage() {
                         <TableHeadCell className="text-left text-[11px] font-medium uppercase tracking-wider text-white/35">
                           Produto
                         </TableHeadCell>
-
                         <TableHeadCell className="text-left text-[11px] font-medium uppercase tracking-wider text-white/35">
                           Descrição
                         </TableHeadCell>
-
                         <TableHeadCell className="text-center text-[11px] font-medium uppercase tracking-wider text-white/35">
                           Impressão
                         </TableHeadCell>
-
                         <TableHeadCell className="text-center text-[11px] font-medium uppercase tracking-wider text-white/35">
                           Filamento
                         </TableHeadCell>
-
                         <TableHeadCell className="text-right text-[11px] font-medium uppercase tracking-wider text-white/35">
                           Preço
                         </TableHeadCell>
-
                         <TableHeadCell className="text-center text-[11px] font-medium uppercase tracking-wider text-white/35">
                           Cadastro
                         </TableHeadCell>
-
                         <TableHeadCell className="text-center text-[11px] font-medium uppercase tracking-wider text-white/35">
                           Ações
                         </TableHeadCell>
@@ -261,15 +454,9 @@ export default function ProductsPage() {
                           key={product.id}
                           className="border-b border-white/5 transition-colors hover:bg-white/[0.025] last:border-0"
                         >
-                          {/* Produto */}
                           <TableCell className="py-4">
                             <div className="flex items-center gap-3">
-                              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.035]">
-                                <span className="text-xs font-semibold text-[var(--accent)]">
-                                  {product.name?.charAt(0)?.toUpperCase() ||
-                                    "P"}
-                                </span>
-                              </div>
+                              <ProductImage product={product} />
 
                               <div className="min-w-0">
                                 <p className="truncate font-medium text-white">
@@ -291,42 +478,36 @@ export default function ProductsPage() {
                             </div>
                           </TableCell>
 
-                          {/* Descrição */}
                           <TableCell className="max-w-[280px] py-4">
                             <p className="truncate text-sm text-white/45">
                               {product.description || "Sem descrição"}
                             </p>
                           </TableCell>
 
-                          {/* Tempo */}
                           <TableCell className="py-4 text-center">
                             <span className="text-sm font-medium text-white">
                               {formatPrintTime(product.printTimeMinutes)}
                             </span>
                           </TableCell>
 
-                          {/* Filamento */}
                           <TableCell className="py-4 text-center">
                             <span className="text-sm text-white/55">
                               {Number(product.filamentGrams ?? 0)} g
                             </span>
                           </TableCell>
 
-                          {/* Preço */}
                           <TableCell className="py-4 text-right">
                             <span className="font-semibold text-white">
                               {formatCurrency(product.price)}
                             </span>
                           </TableCell>
 
-                          {/* Cadastro */}
                           <TableCell className="py-4 text-center">
                             <span className="text-sm text-white/40">
                               {formatDate(product.createdAt)}
                             </span>
                           </TableCell>
 
-                          {/* Ações */}
                           <TableCell className="py-4">
                             <div className="flex items-center justify-center gap-1.5">
                               <Button
@@ -353,7 +534,6 @@ export default function ProductsPage() {
                         </TableRow>
                       ))}
 
-                      {/* Empty State */}
                       {filtered.length === 0 && (
                         <TableRow>
                           <TableCell colSpan={7}>
@@ -386,14 +566,9 @@ export default function ProductsPage() {
                       className="rounded-2xl border border-white/10 bg-white/[0.025] p-4 shadow-lg shadow-black/10 backdrop-blur-xl"
                     >
                       <div className="space-y-4">
-                        {/* Header */}
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex min-w-0 items-center gap-3">
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.035]">
-                              <span className="text-xs font-semibold text-[var(--accent)]">
-                                {product.name?.charAt(0)?.toUpperCase() || "P"}
-                              </span>
-                            </div>
+                            <ProductImage product={product} mobile />
 
                             <div className="min-w-0">
                               <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--accent)]/70">
@@ -407,7 +582,6 @@ export default function ProductsPage() {
                           </div>
                         </div>
 
-                        {/* Descrição */}
                         <div>
                           <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/30">
                             Descrição
@@ -418,13 +592,11 @@ export default function ProductsPage() {
                           </p>
                         </div>
 
-                        {/* Informações */}
                         <div className="grid grid-cols-2 gap-4 border-t border-white/5 pt-4">
                           <div>
                             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/30">
                               Tempo
                             </p>
-
                             <p className="mt-1 text-sm font-semibold text-white">
                               {formatPrintTime(product.printTimeMinutes)}
                             </p>
@@ -434,7 +606,6 @@ export default function ProductsPage() {
                             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/30">
                               Filamento
                             </p>
-
                             <p className="mt-1 text-sm text-white/45">
                               {Number(product.filamentGrams ?? 0)} g
                             </p>
@@ -444,7 +615,6 @@ export default function ProductsPage() {
                             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/30">
                               Preço
                             </p>
-
                             <p className="mt-1 text-sm font-semibold text-white">
                               {formatCurrency(product.price)}
                             </p>
@@ -454,14 +624,12 @@ export default function ProductsPage() {
                             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/30">
                               Cadastro
                             </p>
-
                             <p className="mt-1 text-sm text-white/45">
                               {formatDate(product.createdAt)}
                             </p>
                           </div>
                         </div>
 
-                        {/* Link */}
                         {product.productUrl && (
                           <a
                             href={product.productUrl}
@@ -474,7 +642,6 @@ export default function ProductsPage() {
                           </a>
                         )}
 
-                        {/* Ações */}
                         <div className="flex items-center gap-2 border-t border-white/10 pt-3">
                           <Button
                             variant="ghost"
@@ -500,7 +667,6 @@ export default function ProductsPage() {
                     </div>
                   ))}
 
-                  {/* Empty State Mobile */}
                   {filtered.length === 0 && (
                     <div className="flex flex-col items-center justify-center py-16 text-center">
                       <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03]">
@@ -526,7 +692,9 @@ export default function ProductsPage() {
         {/* Modal */}
         <Modal
           isOpen={modalOpen}
-          onClose={() => setModalOpen(false)}
+          onClose={() => {
+            if (!imageUploading) setModalOpen(false);
+          }}
           title={editingProduct ? "Editar produto" : "Novo produto"}
           className="border border-white/10 bg-[#0a1120]/95 text-white shadow-2xl shadow-black/50 backdrop-blur-2xl"
         >
@@ -537,22 +705,76 @@ export default function ProductsPage() {
                 <p className="text-sm font-medium text-white">
                   Informações do produto
                 </p>
-
                 <p className="mt-1 text-xs text-white/35">
                   Preencha os dados básicos para cadastrar o produto.
                 </p>
               </div>
 
               <div className="space-y-5">
+                {/* Imagem do produto */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-white/70">
+                    Imagem do produto
+                  </label>
+
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                    <div className="flex h-32 w-32 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035]">
+                      {imagePreview || form.imageUrl ? (
+                        <img
+                          src={imagePreview || form.imageUrl}
+                          alt="Prévia do produto"
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex flex-col items-center gap-2 text-white/30">
+                          <ImagePlus className="h-7 w-7" />
+                          <span className="text-xs">Sem imagem</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex flex-col items-start gap-2">
+                      <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-white/80 transition hover:border-[var(--accent)]/40 hover:bg-white/[0.07]">
+                        <ImagePlus className="h-4 w-4 text-[var(--accent)]" />
+                        Escolher imagem
+
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          className="hidden"
+                          disabled={imageUploading}
+                          onChange={(e) => {
+                            handleImageChange(e.target.files?.[0]);
+                            e.currentTarget.value = "";
+                          }}
+                        />
+                      </label>
+
+                      <p className="text-xs text-white/35">
+                        JPG, PNG ou WebP. Máximo de 5 MB.
+                      </p>
+
+                      {(imagePreview || form.imageUrl) && (
+                        <button
+                          type="button"
+                          disabled={imageUploading}
+                          onClick={clearImage}
+                          className="inline-flex items-center gap-1.5 text-xs text-white/45 transition hover:text-red-400 disabled:opacity-40"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                          Remover imagem
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
                 <Input
                   id="name"
                   label="Nome"
                   value={form.name}
                   onChange={(e) =>
-                    setForm({
-                      ...form,
-                      name: e.target.value,
-                    })
+                    setForm({ ...form, name: e.target.value })
                   }
                   required
                   className="border-white/10 bg-white/[0.035] text-white placeholder:text-white/25 focus:border-[var(--accent)]/40 focus:ring-[var(--accent)]/20"
@@ -563,26 +785,20 @@ export default function ProductsPage() {
                   label="Descrição"
                   value={form.description}
                   onChange={(e) =>
-                    setForm({
-                      ...form,
-                      description: e.target.value,
-                    })
+                    setForm({ ...form, description: e.target.value })
                   }
                   className="border-white/10 bg-white/[0.035] text-white placeholder:text-white/25 focus:border-[var(--accent)]/40 focus:ring-[var(--accent)]/20"
                 />
 
                 <Input
                   id="price"
-                  label="Preço (R$)"
+                  label="Preço de venda (R$)"
                   type="number"
                   step="0.01"
                   min="0"
                   value={form.price}
                   onChange={(e) =>
-                    setForm({
-                      ...form,
-                      price: e.target.value,
-                    })
+                    setForm({ ...form, price: e.target.value })
                   }
                   required
                   className="border-white/10 bg-white/[0.035] text-white placeholder:text-white/25 focus:border-[var(--accent)]/40 focus:ring-[var(--accent)]/20"
@@ -596,14 +812,12 @@ export default function ProductsPage() {
                 <p className="text-sm font-medium text-white">
                   Dados de impressão
                 </p>
-
                 <p className="mt-1 text-xs text-white/35">
                   Informe os dados utilizados para produzir este produto.
                 </p>
               </div>
 
               <div className="space-y-5">
-                {/* Tempo */}
                 <div>
                   <label className="mb-2 block text-sm font-medium text-white">
                     Tempo de impressão
@@ -645,7 +859,6 @@ export default function ProductsPage() {
                   </div>
                 </div>
 
-                {/* Filamento */}
                 <Input
                   id="filamentGrams"
                   label="Filamento utilizado (g)"
@@ -663,7 +876,6 @@ export default function ProductsPage() {
                   className="border-white/10 bg-white/[0.035] text-white placeholder:text-white/25 focus:border-[var(--accent)]/40 focus:ring-[var(--accent)]/20"
                 />
 
-                {/* Link */}
                 <Input
                   id="productUrl"
                   label="Link do produto"
@@ -681,11 +893,97 @@ export default function ProductsPage() {
               </div>
             </div>
 
+            {/* Custos de produção */}
+            <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 sm:p-5">
+              <div className="mb-5">
+                <p className="text-sm font-medium text-white">
+                  Custos de produção
+                </p>
+                <p className="mt-1 text-xs text-white/35">
+                  Informe os custos para calcular o valor necessário para
+                  produzir este produto.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {costFields.map((field) => (
+                  <div key={field.key} className="space-y-2">
+                    <label
+                      htmlFor={field.key}
+                      className="block text-sm font-medium text-white/70"
+                    >
+                      {field.label} (R$)
+                    </label>
+
+                    <div className="flex items-center rounded-xl border border-white/10 bg-white/[0.035] px-3 transition-colors focus-within:border-[var(--accent)]/50">
+                      <span className="mr-2 text-sm text-white/35">R$</span>
+
+                      <input
+                        id={field.key}
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={form[field.key]}
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+                            [field.key]: e.target.value,
+                          })
+                        }
+                        placeholder="0,00"
+                        className="w-full bg-transparent py-3 text-sm text-white outline-none placeholder:text-white/25"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-5 flex items-center justify-between gap-4 rounded-xl border border-[var(--accent)]/25 bg-[var(--accent)]/[0.07] p-4">
+                <div>
+                  <p className="text-sm font-medium text-white">
+                    Custo total de produção
+                  </p>
+                  <p className="mt-1 text-xs text-white/40">
+                    Soma dos quatro componentes
+                  </p>
+                </div>
+
+                <p className="shrink-0 text-lg font-semibold text-[var(--accent)]">
+                  {productionCost.toLocaleString("pt-BR", {
+                    style: "currency",
+                    currency: "BRL",
+                  })}
+                </p>
+              </div>
+
+              <div className="mt-3 flex items-center justify-between gap-4 px-1">
+                <span className="text-sm text-white/50">
+                  Resultado estimado por unidade
+                </span>
+
+                <span
+                  className={`text-sm font-semibold ${
+                    (Number(form.price) || 0) - productionCost >= 0
+                      ? "text-emerald-400"
+                      : "text-red-400"
+                  }`}
+                >
+                  {(
+                    (Number(form.price) || 0) - productionCost
+                  ).toLocaleString("pt-BR", {
+                    style: "currency",
+                    currency: "BRL",
+                  })}
+                </span>
+              </div>
+            </div>
+
             {/* Footer */}
             <div className="flex flex-col-reverse gap-3 border-t border-white/5 pt-5 sm:flex-row sm:justify-end">
               <Button
                 type="button"
                 variant="secondary"
+                disabled={imageUploading}
                 className="h-10 rounded-xl border border-white/10 bg-white/[0.035] px-5 text-white/60 transition-all hover:bg-white/[0.07] hover:text-white"
                 onClick={() => setModalOpen(false)}
               >
@@ -694,9 +992,14 @@ export default function ProductsPage() {
 
               <Button
                 type="submit"
-                className="h-10 rounded-xl bg-[var(--accent)] px-5 font-semibold text-white shadow-lg shadow-[rgba(var(--accent-rgb),0.15)] transition-all hover:brightness-110"
+                disabled={imageUploading}
+                className="h-10 rounded-xl bg-[var(--accent)] px-5 font-semibold text-white shadow-lg shadow-[rgba(var(--accent-rgb),0.15)] transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {editingProduct ? "Salvar alterações" : "Criar produto"}
+                {imageUploading
+                  ? "Enviando imagem..."
+                  : editingProduct
+                    ? "Salvar alterações"
+                    : "Criar produto"}
               </Button>
             </div>
           </form>
