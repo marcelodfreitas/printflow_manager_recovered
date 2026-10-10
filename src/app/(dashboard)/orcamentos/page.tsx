@@ -279,13 +279,15 @@ export default function QuotesPage() {
     }, 0);
   }
 
-  function calcTax() {
-    return calcSubtotal() * 0.1;
-  }
 
-  function calcTotal() {
-    return calcSubtotal() + calcTax();
-  }
+function calcTax() {
+  return 0;
+}
+
+function calcTotal() {
+  return calcSubtotal();
+}
+
 
   function calcDiscountPercent() {
     const value = Number(form.discountPercent);

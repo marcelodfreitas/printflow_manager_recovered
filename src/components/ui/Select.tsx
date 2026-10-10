@@ -25,9 +25,7 @@ interface SelectProps {
   error?: string;
   required?: boolean;
   disabled?: boolean;
-
   options: Option[];
-
   onChange?: (event: React.ChangeEvent<HTMLSelectElement>) => void;
 }
 
@@ -44,10 +42,12 @@ export default function Select({
   options,
   onChange,
 }: SelectProps) {
-  const selectedOption = options.find((option) => option.value === value);
+  const selectedOption = options.find(
+    (option) => option.value === value
+  );
 
   return (
-    <div className="w-full">
+    <div className="w-full min-w-0">
       {label && (
         <label
           htmlFor={id}
@@ -61,10 +61,10 @@ export default function Select({
         value={value}
         defaultValue={defaultValue}
         disabled={disabled}
-        onValueChange={(value) => {
+        onValueChange={(newValue) => {
           onChange?.({
             target: {
-              value,
+              value: newValue,
               name: id,
             },
           } as React.ChangeEvent<HTMLSelectElement>);
@@ -75,32 +75,21 @@ export default function Select({
           aria-required={required}
           className={cn(
             `
-            flex
-            h-11
-            w-full
-            items-center
-            justify-between
-            rounded-xl
-            border
-            border-white/10
-            bg-white/5
-            px-4
-            text-sm
-            text-white
-            backdrop-blur-xl
-            transition-all
-            shadow-sm
-
-            hover:border-white/20
-
-            focus:border-[var(--accent)]/60
-            focus:outline-none
-            focus:ring-2
-            focus:ring-[var(--accent)]/20
-
-            data-[placeholder]:text-white/30
-            disabled:opacity-50
-            disabled:cursor-not-allowed
+              flex h-11 w-full min-w-0
+              items-center justify-between gap-2
+              rounded-xl border border-white/10
+              bg-white/5 px-4
+              text-sm text-white
+              shadow-sm backdrop-blur-xl
+              transition-all
+              hover:border-white/20
+              focus:border-[var(--accent)]/60
+              focus:outline-none
+              focus:ring-2
+              focus:ring-[var(--accent)]/20
+              data-[placeholder]:text-white/30
+              disabled:cursor-not-allowed
+              disabled:opacity-50
             `,
             error && "border-red-500",
             className
@@ -115,17 +104,19 @@ export default function Select({
                   <span
                     className={cn(
                       "h-2 w-2 shrink-0 rounded-full",
-                      selectedOption.dot,
+                      selectedOption.dot
                     )}
                   />
                 )}
-                <span className="truncate">{selectedOption.label}</span>
+                <span className="truncate">
+                  {selectedOption.label}
+                </span>
               </span>
             )}
           </SelectPrimitive.Value>
 
-          <SelectPrimitive.Icon>
-            <ChevronDown className="h-4 w-4 text-white/40" />
+          <SelectPrimitive.Icon asChild>
+            <ChevronDown className="h-4 w-4 shrink-0 text-white/40" />
           </SelectPrimitive.Icon>
         </SelectPrimitive.Trigger>
 
@@ -133,75 +124,94 @@ export default function Select({
           <SelectPrimitive.Content
             position="popper"
             sideOffset={8}
+            collisionPadding={12}
             className="
-              z-50
-              min-w-[220px]
+              z-[100]
+              min-w-[var(--radix-select-trigger-width)]
+              max-w-[calc(100vw-24px)]
               overflow-hidden
               rounded-xl
-              border
-              border-white/10
+              border border-white/10
               bg-[#0A1120]
-              shadow-2xl
-              shadow-black/60
+              shadow-2xl shadow-black/60
               backdrop-blur-2xl
             "
           >
-            <SelectPrimitive.ScrollUpButton className="flex justify-center py-2">
-              <ChevronUp className="h-4 w-4 text-white/40" />
+            <SelectPrimitive.ScrollUpButton
+              className="
+                flex h-8 cursor-pointer items-center justify-center
+                bg-[#0A1120] text-white/50
+                hover:text-white
+              "
+            >
+              <ChevronUp className="h-4 w-4" />
             </SelectPrimitive.ScrollUpButton>
 
-            <SelectPrimitive.Viewport className="p-2">
+            <SelectPrimitive.Viewport
+              className="
+                w-full p-2
+                overflow-y-auto
+                overscroll-contain
+                [scrollbar-width:thin]
+                [scrollbar-color:rgba(255,255,255,0.25)_transparent]
+              "
+              style={{
+                maxHeight:
+                  "min(280px, var(--radix-select-content-available-height, 60vh))",
+              }}
+            >
               {options.map((option) => (
                 <SelectPrimitive.Item
                   key={option.value}
                   value={option.value}
                   className="
-                    relative
-                    flex
-                    cursor-pointer
-                    select-none
-                    items-center
-                    rounded-lg
-                    py-2.5
-                    pl-10
-                    pr-4
-                    text-sm
-                    text-white/80
-                    outline-none
-                    transition-all
-
-                    hover:accent-bg/15
-                    focus:accent-bg/15
-
-                    data-[state=checked]:accent-bg/20
+                    relative flex w-full
+                    cursor-pointer select-none
+                    items-center rounded-lg
+                    py-2.5 pl-10 pr-4
+                    text-sm text-white/80
+                    outline-none transition-colors
+                    hover:bg-white/10
+                    focus:bg-white/10
+                    data-[state=checked]:bg-[var(--accent)]/15
                     data-[state=checked]:text-white
+                    data-[disabled]:pointer-events-none
+                    data-[disabled]:opacity-40
                   "
                 >
                   <span className="absolute left-3 flex h-4 w-4 items-center justify-center">
                     <SelectPrimitive.ItemIndicator>
-                      <Check className="h-4 w-4 accent-text" />
+                      <Check className="h-4 w-4 text-[var(--accent)]" />
                     </SelectPrimitive.ItemIndicator>
                   </span>
 
                   <SelectPrimitive.ItemText>
-                    <span className="flex items-center gap-2">
+                    <span className="flex min-w-0 items-center gap-2">
                       {option.dot && (
                         <span
                           className={cn(
                             "h-2 w-2 shrink-0 rounded-full",
-                            option.dot,
+                            option.dot
                           )}
                         />
                       )}
-                      {option.label}
+                      <span className="break-words">
+                        {option.label}
+                      </span>
                     </span>
                   </SelectPrimitive.ItemText>
                 </SelectPrimitive.Item>
               ))}
             </SelectPrimitive.Viewport>
 
-            <SelectPrimitive.ScrollDownButton className="flex justify-center py-2">
-              <ChevronDown className="h-4 w-4 text-white/40" />
+            <SelectPrimitive.ScrollDownButton
+              className="
+                flex h-8 cursor-pointer items-center justify-center
+                bg-[#0A1120] text-white/50
+                hover:text-white
+              "
+            >
+              <ChevronDown className="h-4 w-4" />
             </SelectPrimitive.ScrollDownButton>
           </SelectPrimitive.Content>
         </SelectPrimitive.Portal>

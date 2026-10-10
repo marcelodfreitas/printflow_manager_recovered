@@ -113,6 +113,30 @@ export interface Order {
   deadline?: string;
 }
 
+
+export interface OrderItem {
+  id?: string;
+  orderId?: string;
+  productId?: string;
+  productName: string;
+  printerId?: string | null;
+  printerName?: string | null;
+  filamentId?: string | null;
+  filamentName?: string | null;
+  filamentColor?: string | null;
+  quantity: number;
+  totalHours: number;
+  filamentGrams: number;
+  cost: number;
+  price: number;
+  createdAt?: string;
+}
+
+export type OrderWithItems = Order & {
+  items: OrderItem[];
+};
+
+
 export type QuoteStatus = "draft" | "sent" | "approved" | "rejected" | "converted";
 
 export interface Quote {
