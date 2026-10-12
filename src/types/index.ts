@@ -62,7 +62,20 @@ export interface Filament {
   costPerKg: number;
   remainingWeight?: number;
   purchaseDate?: string,
+  filamentId?: string;
   purchaseStore?: string;
+}
+
+
+export interface ProductFilamentColor {
+  id: string;
+  name: string;
+  hexColor: string;
+  material: string;
+  grams: number;
+  pricePerKg: number;
+  cost: number;
+  filamentId?: string;
 }
 
 export interface Product {
@@ -70,6 +83,7 @@ export interface Product {
   name: string;
   description?: string;
   price: number;
+  basePrice?: number;
   printTimeMinutes: number;
   filamentGrams: number;
   productUrl?: string;
@@ -79,7 +93,9 @@ export interface Product {
   laborCost: number;
   packagingCost: number;
   imageUrl?: string;
+  filamentColors?: ProductFilamentColor[];
 }
+
 
 export type OrderStatus =
   | "pending"

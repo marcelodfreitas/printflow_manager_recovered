@@ -181,32 +181,39 @@ const monthlyProfit = deliveredMonthOrders.reduce(
     0,
   );
 
-  const revenueData = currentMonthOrders
-    .reduce(
-      (acc, order) => {
-        const date = new Date(order.createdAt).toLocaleDateString(
-          "pt-BR",
-          {
-            day: "2-digit",
-            month: "2-digit",
-          },
-        );
+const revenueData = currentMonthOrders
+  .reduce(
+    (acc, order) => {
+      const date = new Date(order.createdAt).toLocaleDateString(
+        "pt-BR",
+        {
+          day: "2-digit",
+          month: "2-digit",
+        },
+      );
 
-        const existing = acc.find((item) => item.date === date);
+      const existing = acc.find((item) => item.date === date);
 
-        if (existing) {
-          existing.revenue += order.price;
-        } else {
-          acc.push({
-            date,
-            revenue: order.price,
-          });
-        }
+      if (existing) {
+        existing.revenue += order.price;
+      } else {
+        acc.push({
+          date,
+          revenue: order.price,
+        });
+      }
 
-        return acc;
-      },
-      [] as { date: string; revenue: number }[],
-    );
+      return acc;
+    },
+    [] as { date: string; revenue: number }[],
+  )
+  .sort((a, b) => {
+    const [dayA, monthA] = a.date.split("/").map(Number);
+    const [dayB, monthB] = b.date.split("/").map(Number);
+
+    return monthA - monthB || dayA - dayB;
+  });
+
 
   const recentOrders = [...orders]
     .sort(
@@ -511,7 +518,7 @@ const monthlyProfit = deliveredMonthOrders.reduce(
             3MF UPLOAD
         ================================================================= */}
 
-        <section
+        {/* <section
           onClick={handle3MFUpload}
           className="group relative cursor-pointer overflow-hidden rounded-3xl border border-dashed border-white/15 bg-white/[0.025] transition-all duration-300 hover:border-[var(--accent)] hover:bg-white/[0.04]"
         >
@@ -537,7 +544,7 @@ const monthlyProfit = deliveredMonthOrders.reduce(
               <ArrowUpRight className="h-3.5 w-3.5" />
             </div>
           </div>
-        </section>
+        </section> */}
 
         {/* ================================================================
             QUICK STATS

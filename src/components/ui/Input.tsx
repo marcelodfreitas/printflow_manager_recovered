@@ -11,12 +11,23 @@ export default function Input({
   error,
   icon,
   className = "",
+  value,
+  defaultValue,
   ...props
 }: InputProps) {
+  const displayValue =
+    props.type === "number" && value === "0"
+      ? ""
+      : props.type === "number" && value === 0
+        ? ""
+        : value;
+
   return (
     <div className="flex flex-col gap-2">
       {label && (
-        <label className="text-sm font-medium text-white">{label}</label>
+        <label className="text-sm font-medium text-white">
+          {label}
+        </label>
       )}
 
       <div className="relative">
@@ -36,24 +47,28 @@ export default function Input({
 
         <input
           {...props}
+          value={value !== undefined ? displayValue : undefined}
+          defaultValue={value === undefined ? defaultValue : undefined}
           className={`
-  w-full
-  rounded-xl
-  border
-  bg-white/[0.03]
-  px-4
-  py-3
-  text-white
-  placeholder:text-muted
-  outline-none
-  transition-all
-  focus:ring-2
-
-  ${icon ? "pl-11" : ""}
-${error ? "border-red-500 focus:border-red-500 focus:ring-red-500/20" : ""}
-
-  ${className}
-`}
+            w-full
+            rounded-xl
+            border
+            bg-white/[0.03]
+            px-4
+            py-3
+            text-white
+            placeholder:text-muted
+            outline-none
+            transition-all
+            focus:ring-2
+            ${icon ? "pl-11" : ""}
+            ${
+              error
+                ? "border-red-500 focus:border-red-500 focus:ring-red-500/20"
+                : ""
+            }
+            ${className}
+          `}
         />
       </div>
     </div>

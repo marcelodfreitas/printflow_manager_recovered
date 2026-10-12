@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useMemo, useState } from "react";
@@ -17,8 +16,10 @@ import {
   CalendarDays,
   UserRound,
   X,
+  Eye,
 } from "lucide-react";
 
+import Link from "next/link";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
@@ -80,7 +81,10 @@ function newItem(): OrderFormItem {
 function StatusBadge({ status }: { status: string }) {
   const config: Record<
     string,
-    { variant: "default" | "warning" | "info" | "success" | "danger"; label: string }
+    {
+      variant: "default" | "warning" | "info" | "success" | "danger";
+      label: string;
+    }
   > = {
     draft: { variant: "default", label: "Rascunho" },
     pending: { variant: "warning", label: "Pendente" },
@@ -159,7 +163,13 @@ function getUsage(items: OrderItem[], cancelled: boolean) {
 }
 
 export default function OrdersPage() {
-  const { orders, loading: ordersLoading, create, update, remove } = useOrders();
+  const {
+    orders,
+    loading: ordersLoading,
+    create,
+    update,
+    remove,
+  } = useOrders();
   const { clients } = useClients();
   const { products } = useProducts();
   const { printers } = usePrinters();
@@ -305,14 +315,14 @@ export default function OrdersPage() {
   ) {
     const before = getUsage(previousItems, previousCancelled);
     const after = getUsage(nextItems, nextCancelled);
-const filamentIds = new Set(
-  Array.from(before.keys()).concat(Array.from(after.keys()))
-);
-
+    const filamentIds = new Set(
+      Array.from(before.keys()).concat(Array.from(after.keys())),
+    );
 
     filamentIds.forEach((filamentId) => {
       // adjustStock positivo repõe estoque; negativo consome estoque.
-      const delta = (before.get(filamentId) ?? 0) - (after.get(filamentId) ?? 0);
+      const delta =
+        (before.get(filamentId) ?? 0) - (after.get(filamentId) ?? 0);
 
       if (delta !== 0) {
         adjustStock(filamentId, delta);
@@ -347,7 +357,9 @@ const filamentIds = new Set(
 
     items.forEach((item, index) => {
       if (!item.productId || !item.printerId || !item.filamentId) {
-        setError(`Complete produto, impressora e filamento do item ${index + 1}.`);
+        setError(
+          `Complete produto, impressora e filamento do item ${index + 1}.`,
+        );
         return;
       }
 
@@ -366,7 +378,9 @@ const filamentIds = new Set(
         !Number.isFinite(price) ||
         price < 0
       ) {
-        setError(`Confira quantidade, tempo, filamento e preço do item ${index + 1}.`);
+        setError(
+          `Confira quantidade, tempo, filamento e preço do item ${index + 1}.`,
+        );
         return;
       }
 
@@ -375,7 +389,9 @@ const filamentIds = new Set(
       const filament = filaments.find((f) => f.id === item.filamentId);
 
       if (!product || !printer || !filament) {
-        setError(`Não foi possível encontrar todos os dados do item ${index + 1}.`);
+        setError(
+          `Não foi possível encontrar todos os dados do item ${index + 1}.`,
+        );
         return;
       }
 
@@ -399,7 +415,10 @@ const filamentIds = new Set(
     });
 
     const firstItem = resolvedItems[0];
-    const totalQuantity = resolvedItems.reduce((sum, item) => sum + item.quantity, 0);
+    const totalQuantity = resolvedItems.reduce(
+      (sum, item) => sum + item.quantity,
+      0,
+    );
     const totalHours = resolvedItems.reduce(
       (sum, item) => sum + item.totalHours * item.quantity,
       0,
@@ -448,7 +467,9 @@ const filamentIds = new Set(
         : await create(data, resolvedItems);
 
       if (!result) {
-        setError("Não foi possível salvar o pedido. Confira o console do navegador.");
+        setError(
+          "Não foi possível salvar o pedido. Confira o console do navegador.",
+        );
         return;
       }
 
@@ -532,11 +553,16 @@ const filamentIds = new Set(
               <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-[rgba(var(--accent-rgb),0.18)] bg-[rgba(var(--accent-rgb),0.07)]">
                 <ShoppingCart className="h-4 w-4" />
               </div>
-              <span className="text-xs font-semibold uppercase tracking-[0.16em]">Gestão</span>
+              <span className="text-xs font-semibold uppercase tracking-[0.16em]">
+                Gestão
+              </span>
             </div>
-            <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">Pedidos</h1>
+            <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+              Pedidos
+            </h1>
             <p className="mt-1 max-w-2xl text-sm text-white/40">
-              Acompanhe pedidos com vários produtos, produção, prazos e faturamento.
+              Acompanhe pedidos com vários produtos, produção, prazos e
+              faturamento.
             </p>
           </div>
 
@@ -556,20 +582,50 @@ const filamentIds = new Set(
         ) : (
           <>
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-              <SummaryCard icon={ShoppingCart} label="Total" value={orders.length} description="Pedidos cadastrados" />
-              <SummaryCard icon={Clock3} label="Pendentes" value={pendingOrders} description="Aguardando produção" />
-              <SummaryCard icon={Printer} label="Em produção" value={inProgressOrders} description="Aprovados ou imprimindo" />
-              <SummaryCard icon={CheckCircle2} label="Concluídos" value={completedOrders} description="Finalizados ou entregues" />
-              <SummaryCard icon={CircleDollarSign} label="Faturamento" value={formatCurrency(totalRevenue)} description="Pedidos não cancelados" />
+              <SummaryCard
+                icon={ShoppingCart}
+                label="Total"
+                value={orders.length}
+                description="Pedidos cadastrados"
+              />
+              <SummaryCard
+                icon={Clock3}
+                label="Pendentes"
+                value={pendingOrders}
+                description="Aguardando produção"
+              />
+              <SummaryCard
+                icon={Printer}
+                label="Em produção"
+                value={inProgressOrders}
+                description="Aprovados ou imprimindo"
+              />
+              <SummaryCard
+                icon={CheckCircle2}
+                label="Concluídos"
+                value={completedOrders}
+                description="Finalizados ou entregues"
+              />
+              <SummaryCard
+                icon={CircleDollarSign}
+                label="Faturamento"
+                value={formatCurrency(totalRevenue)}
+                description="Pedidos não cancelados"
+              />
             </div>
 
             <Card className="overflow-hidden border border-white/10 bg-white/[0.025] shadow-2xl shadow-black/40 backdrop-blur-2xl">
               <CardHeader className="border-b border-white/5 px-4 py-4 sm:px-5">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                   <div>
-                    <h2 className="text-sm font-semibold text-white">Lista de pedidos</h2>
+                    <h2 className="text-sm font-semibold text-white">
+                      Lista de pedidos
+                    </h2>
                     <p className="mt-1 text-xs text-white/35">
-                      {filtered.length} {filtered.length === 1 ? "pedido encontrado" : "pedidos encontrados"}
+                      {filtered.length}{" "}
+                      {filtered.length === 1
+                        ? "pedido encontrado"
+                        : "pedidos encontrados"}
                     </p>
                   </div>
 
@@ -610,12 +666,17 @@ const filamentIds = new Set(
                         <TableHeadCell>Valor</TableHeadCell>
                         <TableHeadCell>Status</TableHeadCell>
                         <TableHeadCell>Criação</TableHeadCell>
-                        <TableHeadCell className="text-right">Ações</TableHeadCell>
+                        <TableHeadCell className="text-right">
+                          Ações
+                        </TableHeadCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {filtered.map((order) => (
-                        <TableRow key={order.id} className="transition-colors hover:bg-white/[0.025]">
+                        <TableRow
+                          key={order.id}
+                          className="transition-colors hover:bg-white/[0.025]"
+                        >
                           <TableCell>
                             <div className="flex items-center gap-3">
                               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-[rgba(var(--accent-rgb),0.9)]">
@@ -636,9 +697,12 @@ const filamentIds = new Set(
                           </TableCell>
                           <TableCell>
                             <div className="max-w-[210px]">
-                              <p className="truncate text-xs font-medium text-white">{productSummary(order)}</p>
+                              <p className="truncate text-xs font-medium text-white">
+                                {productSummary(order)}
+                              </p>
                               <p className="mt-0.5 text-[10px] text-white/30">
-                                {(Number(order.filamentGrams) || 0).toFixed(1)}g · {(Number(order.totalHours) || 0).toFixed(2)}h
+                                {(Number(order.filamentGrams) || 0).toFixed(1)}g
+                                · {(Number(order.totalHours) || 0).toFixed(2)}h
                               </p>
                             </div>
                           </TableCell>
@@ -647,33 +711,56 @@ const filamentIds = new Set(
                               <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-white/40">
                                 <UserRound className="h-3.5 w-3.5" />
                               </div>
-                              <span className="max-w-[140px] truncate text-xs text-white/70">{order.clientName}</span>
+                              <span className="max-w-[140px] truncate text-xs text-white/70">
+                                {order.clientName}
+                              </span>
                             </div>
                           </TableCell>
                           <TableCell>
                             <div className="max-w-[150px]">
                               <div className="flex items-center gap-1.5">
                                 <Printer className="h-3.5 w-3.5 text-white/30" />
-                                <span className="truncate text-xs text-white/60">{order.printerName || "Várias / não definida"}</span>
+                                <span className="truncate text-xs text-white/60">
+                                  {order.printerName || "Várias / não definida"}
+                                </span>
                               </div>
                               <div className="mt-1 flex items-center gap-1.5">
                                 <Box className="h-3.5 w-3.5 text-white/25" />
-                                <span className="truncate text-[10px] text-white/30">{order.filamentName || "Vários filamentos"}</span>
+                                <span className="truncate text-[10px] text-white/30">
+                                  {order.filamentName || "Vários filamentos"}
+                                </span>
                               </div>
                             </div>
                           </TableCell>
                           <TableCell>
-                            <span className="text-xs font-medium text-white/70">{order.quantity}</span>
+                            <span className="text-xs font-medium text-white/70">
+                              {order.quantity}
+                            </span>
                           </TableCell>
                           <TableCell>
-                            <span className="text-xs font-semibold text-white">{formatCurrency(order.price)}</span>
+                            <span className="text-xs font-semibold text-white">
+                              {formatCurrency(order.price)}
+                            </span>
                           </TableCell>
-                          <TableCell><StatusBadge status={order.status} /></TableCell>
                           <TableCell>
-                            <span className="text-xs text-white/40">{formatDate(order.createdAt)}</span>
+                            <StatusBadge status={order.status} />
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-xs text-white/40">
+                              {formatDate(order.createdAt)}
+                            </span>
                           </TableCell>
                           <TableCell>
                             <div className="flex justify-end gap-1.5">
+                              <Link
+                                href={`/pedidos/${order.id}`}
+                                aria-label="Ver detalhes do pedido"
+                                title="Ver detalhes"
+                                className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/[0.025] text-white/45 transition hover:border-[rgba(var(--accent-rgb),0.35)] hover:text-[rgba(var(--accent-rgb),0.95)]"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Link>
+
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -701,8 +788,12 @@ const filamentIds = new Set(
                           <TableCell colSpan={9}>
                             <div className="flex flex-col items-center justify-center py-14">
                               <ShoppingCart className="h-6 w-6 text-white/25" />
-                              <p className="mt-4 text-sm font-medium text-white/60">Nenhum pedido encontrado</p>
-                              <p className="mt-1 text-xs text-white/30">Tente alterar os filtros ou crie um novo pedido.</p>
+                              <p className="mt-4 text-sm font-medium text-white/60">
+                                Nenhum pedido encontrado
+                              </p>
+                              <p className="mt-1 text-xs text-white/30">
+                                Tente alterar os filtros ou crie um novo pedido.
+                              </p>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -713,60 +804,110 @@ const filamentIds = new Set(
 
                 <div className="space-y-3 p-4 md:hidden">
                   {filtered.map((order) => (
-                    <div key={order.id} className="rounded-2xl border border-white/10 bg-white/[0.025] p-4 shadow-lg shadow-black/20">
+                    <div
+                      key={order.id}
+                      className="rounded-2xl border border-white/10 bg-white/[0.025] p-4 shadow-lg shadow-black/20"
+                    >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="font-mono text-xs font-semibold text-white">#{order.orderNumber ?? order.id.slice(0, 7)}</p>
-                          <p className="mt-1 truncate text-xs text-white/40">{order.clientName}</p>
+                          <p className="font-mono text-xs font-semibold text-white">
+                            #{order.orderNumber ?? order.id.slice(0, 7)}
+                          </p>
+                          <p className="mt-1 truncate text-xs text-white/40">
+                            {order.clientName}
+                          </p>
                         </div>
                         <StatusBadge status={order.status} />
                       </div>
 
                       <div className="mt-4 rounded-xl border border-white/5 bg-white/[0.02] p-3">
-                        <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-white/25">Produtos</p>
-                        <p className="mt-1 text-sm font-medium text-white">{productSummary(order)}</p>
+                        <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-white/25">
+                          Produtos
+                        </p>
+                        <p className="mt-1 text-sm font-medium text-white">
+                          {productSummary(order)}
+                        </p>
                       </div>
 
                       <div className="mt-3 grid grid-cols-3 gap-3 border-t border-white/5 pt-3">
                         <div>
-                          <p className="text-[10px] uppercase text-white/25">Quantidade</p>
-                          <p className="mt-1 text-xs text-white/70">{order.quantity}</p>
+                          <p className="text-[10px] uppercase text-white/25">
+                            Quantidade
+                          </p>
+                          <p className="mt-1 text-xs text-white/70">
+                            {order.quantity}
+                          </p>
                         </div>
                         <div>
-                          <p className="text-[10px] uppercase text-white/25">Tempo</p>
-                          <p className="mt-1 text-xs text-white/70">{(Number(order.totalHours) || 0).toFixed(2)}h</p>
+                          <p className="text-[10px] uppercase text-white/25">
+                            Tempo
+                          </p>
+                          <p className="mt-1 text-xs text-white/70">
+                            {(Number(order.totalHours) || 0).toFixed(2)}h
+                          </p>
                         </div>
                         <div>
-                          <p className="text-[10px] uppercase text-white/25">Valor</p>
-                          <p className="mt-1 text-xs font-semibold text-white">{formatCurrency(order.price)}</p>
+                          <p className="text-[10px] uppercase text-white/25">
+                            Valor
+                          </p>
+                          <p className="mt-1 text-xs font-semibold text-white">
+                            {formatCurrency(order.price)}
+                          </p>
                         </div>
                       </div>
 
                       <div className="mt-3 flex items-center justify-between border-t border-white/5 pt-3">
                         <div>
-                          <p className="text-[10px] uppercase text-white/25">Criado em</p>
-                          <p className="mt-1 text-xs text-white/40">{formatDate(order.createdAt)}</p>
+                          <p className="text-[10px] uppercase text-white/25">
+                            Criado em
+                          </p>
+                          <p className="mt-1 text-xs text-white/40">
+                            {formatDate(order.createdAt)}
+                          </p>
                         </div>
                         {order.deadline && (
                           <div className="text-right">
-                            <p className="text-[10px] uppercase text-white/25">Prazo</p>
-                            <p className="mt-1 text-xs text-white/40">{formatDate(order.deadline)}</p>
+                            <p className="text-[10px] uppercase text-white/25">
+                              Prazo
+                            </p>
+                            <p className="mt-1 text-xs text-white/40">
+                              {formatDate(order.deadline)}
+                            </p>
                           </div>
                         )}
                       </div>
 
                       <div className="mt-4 flex gap-2 border-t border-white/5 pt-3">
-                        <Button variant="ghost" size="sm" onClick={() => openEdit(order)} className="h-10 flex-1 rounded-xl border border-white/10 bg-white/[0.025] text-white/55">
+                        <Link
+                          href={`/pedidos/${order.id}`}
+                          className="inline-flex h-10 flex-1 items-center justify-center rounded-xl border border-[rgba(var(--accent-rgb),0.25)] bg-[rgba(var(--accent-rgb),0.06)] text-xs text-[var(--accent)]"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Link>
+
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openEdit(order)}
+                          className="h-10 flex-1 rounded-xl border border-white/10 bg-white/[0.025] text-white/55"
+                        >
                           <Pencil className="mr-2 h-4 w-4" /> Editar
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDelete(order)} className="h-10 flex-1 rounded-xl border border-white/10 bg-white/[0.025] text-white/55">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(order)}
+                          className="h-10 flex-1 rounded-xl border border-white/10 bg-white/[0.025] text-white/55"
+                        >
                           <Trash2 className="mr-2 h-4 w-4" /> Excluir
                         </Button>
                       </div>
                     </div>
                   ))}
                   {filtered.length === 0 && (
-                    <div className="py-12 text-center text-sm text-white/40">Nenhum pedido encontrado.</div>
+                    <div className="py-12 text-center text-sm text-white/40">
+                      Nenhum pedido encontrado.
+                    </div>
                   )}
                 </div>
               </CardContent>
@@ -785,16 +926,23 @@ const filamentIds = new Set(
           <section>
             <div className="mb-3 flex items-center gap-2">
               <div className="h-5 w-1 rounded-full bg-[#fd6401]" />
-              <h3 className="text-sm font-semibold text-white">Dados do pedido</h3>
+              <h3 className="text-sm font-semibold text-white">
+                Dados do pedido
+              </h3>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <Select
                 id="client"
                 label="Cliente"
-                options={clients.map((client) => ({ value: client.id, label: client.name }))}
+                options={clients.map((client) => ({
+                  value: client.id,
+                  label: client.name,
+                }))}
                 value={form.clientId}
-                onChange={(e) => setForm((prev) => ({ ...prev, clientId: e.target.value }))}
+                onChange={(e) =>
+                  setForm((prev) => ({ ...prev, clientId: e.target.value }))
+                }
                 required
                 className="border-white/10 bg-white/[0.04] text-white"
               />
@@ -803,7 +951,12 @@ const filamentIds = new Set(
                 label="Status"
                 options={orderStatuses}
                 value={form.status}
-                onChange={(e) => setForm((prev) => ({ ...prev, status: e.target.value as Order["status"] }))}
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    status: e.target.value as Order["status"],
+                  }))
+                }
                 className="border-white/10 bg-white/[0.04] text-white"
               />
             </div>
@@ -813,8 +966,12 @@ const filamentIds = new Set(
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <div className="h-5 w-1 rounded-full bg-[#fd6401]" />
-                <h3 className="text-sm font-semibold text-white">Produtos do pedido</h3>
-                <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-xs text-white/50">{items.length}</span>
+                <h3 className="text-sm font-semibold text-white">
+                  Produtos do pedido
+                </h3>
+                <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-xs text-white/50">
+                  {items.length}
+                </span>
               </div>
               <Button
                 type="button"
@@ -827,13 +984,22 @@ const filamentIds = new Set(
 
             <div className="space-y-4">
               {items.map((item, index) => (
-                <div key={item.key} className="rounded-2xl border border-white/10 bg-white/[0.025] p-4">
+                <div
+                  key={item.key}
+                  className="rounded-2xl border border-white/10 bg-white/[0.025] p-4"
+                >
                   <div className="mb-4 flex items-center justify-between">
-                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-white/55">Item {index + 1}</p>
+                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-white/55">
+                      Item {index + 1}
+                    </p>
                     {items.length > 1 && (
                       <button
                         type="button"
-                        onClick={() => setItems((previous) => previous.filter((entry) => entry.key !== item.key))}
+                        onClick={() =>
+                          setItems((previous) =>
+                            previous.filter((entry) => entry.key !== item.key),
+                          )
+                        }
                         className="flex h-8 items-center gap-1.5 rounded-lg border border-white/10 px-2 text-xs text-white/45 transition hover:border-red-500/30 hover:text-red-400"
                       >
                         <X className="h-3.5 w-3.5" /> Remover
@@ -845,7 +1011,10 @@ const filamentIds = new Set(
                     <Select
                       id={`product-${item.key}`}
                       label="Produto"
-                      options={products.map((product) => ({ value: product.id, label: product.name }))}
+                      options={products.map((product) => ({
+                        value: product.id,
+                        label: product.name,
+                      }))}
                       value={item.productId}
                       onChange={(e) => selectProduct(item.key, e.target.value)}
                       required
@@ -854,18 +1023,28 @@ const filamentIds = new Set(
                     <Select
                       id={`printer-${item.key}`}
                       label="Impressora"
-                      options={printers.map((printer) => ({ value: printer.id, label: `${printer.name} (${printer.status})` }))}
+                      options={printers.map((printer) => ({
+                        value: printer.id,
+                        label: `${printer.name} (${printer.status})`,
+                      }))}
                       value={item.printerId}
-                      onChange={(e) => updateItem(item.key, { printerId: e.target.value })}
+                      onChange={(e) =>
+                        updateItem(item.key, { printerId: e.target.value })
+                      }
                       required
                       className="border-white/10 bg-white/[0.04] text-white"
                     />
                     <Select
                       id={`filament-${item.key}`}
                       label="Filamento"
-                      options={filaments.map((filament) => ({ value: filament.id, label: `${filament.name} - ${filament.color}` }))}
+                      options={filaments.map((filament) => ({
+                        value: filament.id,
+                        label: `${filament.name} - ${filament.color}`,
+                      }))}
                       value={item.filamentId}
-                      onChange={(e) => updateItem(item.key, { filamentId: e.target.value })}
+                      onChange={(e) =>
+                        updateItem(item.key, { filamentId: e.target.value })
+                      }
                       required
                       className="border-white/10 bg-white/[0.04] text-white"
                     />
@@ -876,7 +1055,9 @@ const filamentIds = new Set(
                       min="1"
                       step="1"
                       value={item.quantity}
-                      onChange={(e) => updateItem(item.key, { quantity: e.target.value })}
+                      onChange={(e) =>
+                        updateItem(item.key, { quantity: e.target.value })
+                      }
                       required
                       className="border-white/10 bg-white/[0.04] text-white"
                     />
@@ -887,7 +1068,9 @@ const filamentIds = new Set(
                       min="0"
                       step="any"
                       value={item.totalMinutes}
-                      onChange={(e) => updateItem(item.key, { totalMinutes: e.target.value })}
+                      onChange={(e) =>
+                        updateItem(item.key, { totalMinutes: e.target.value })
+                      }
                       required
                       className="border-white/10 bg-white/[0.04] text-white"
                     />
@@ -898,7 +1081,9 @@ const filamentIds = new Set(
                       min="0"
                       step="any"
                       value={item.filamentGrams}
-                      onChange={(e) => updateItem(item.key, { filamentGrams: e.target.value })}
+                      onChange={(e) =>
+                        updateItem(item.key, { filamentGrams: e.target.value })
+                      }
                       required
                       className="border-white/10 bg-white/[0.04] text-white"
                     />
@@ -909,7 +1094,9 @@ const filamentIds = new Set(
                       min="0"
                       step="0.01"
                       value={item.price}
-                      onChange={(e) => updateItem(item.key, { price: e.target.value })}
+                      onChange={(e) =>
+                        updateItem(item.key, { price: e.target.value })
+                      }
                       required
                       className="border-white/10 bg-white/[0.04] text-white"
                     />
@@ -917,13 +1104,34 @@ const filamentIds = new Set(
 
                   <div className="mt-4 flex flex-wrap justify-between gap-2 border-t border-white/5 pt-3 text-xs">
                     <span className="text-white/40">
-                      Subtotal: <strong className="text-white">{formatCurrency((Number(item.price) || 0) * (Number(item.quantity) || 0))}</strong>
+                      Subtotal:{" "}
+                      <strong className="text-white">
+                        {formatCurrency(
+                          (Number(item.price) || 0) *
+                            (Number(item.quantity) || 0),
+                        )}
+                      </strong>
                     </span>
                     <span className="text-white/40">
-                      Consumo: <strong className="text-white">{((Number(item.filamentGrams) || 0) * (Number(item.quantity) || 0)).toFixed(1)} g</strong>
+                      Consumo:{" "}
+                      <strong className="text-white">
+                        {(
+                          (Number(item.filamentGrams) || 0) *
+                          (Number(item.quantity) || 0)
+                        ).toFixed(1)}{" "}
+                        g
+                      </strong>
                     </span>
                     <span className="text-white/40">
-                      Tempo: <strong className="text-white">{(((Number(item.totalMinutes) || 0) * (Number(item.quantity) || 0)) / 60).toFixed(2)} h</strong>
+                      Tempo:{" "}
+                      <strong className="text-white">
+                        {(
+                          ((Number(item.totalMinutes) || 0) *
+                            (Number(item.quantity) || 0)) /
+                          60
+                        ).toFixed(2)}{" "}
+                        h
+                      </strong>
                     </span>
                   </div>
                 </div>
@@ -933,13 +1141,29 @@ const filamentIds = new Set(
             <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
               {[
                 { label: "Unidades", value: String(itemTotals.quantity) },
-                { label: "Tempo total", value: `${(itemTotals.minutes / 60).toFixed(2)} h` },
-                { label: "Filamento total", value: `${itemTotals.grams.toFixed(1)} g` },
-                { label: "Total do pedido", value: formatCurrency(itemTotals.price) },
+                {
+                  label: "Tempo total",
+                  value: `${(itemTotals.minutes / 60).toFixed(2)} h`,
+                },
+                {
+                  label: "Filamento total",
+                  value: `${itemTotals.grams.toFixed(1)} g`,
+                },
+                {
+                  label: "Total do pedido",
+                  value: formatCurrency(itemTotals.price),
+                },
               ].map((summary) => (
-                <div key={summary.label} className="rounded-xl border border-white/10 bg-white/[0.035] p-3">
-                  <p className="text-[10px] uppercase tracking-[0.1em] text-white/35">{summary.label}</p>
-                  <p className="mt-1 text-sm font-semibold text-white">{summary.value}</p>
+                <div
+                  key={summary.label}
+                  className="rounded-xl border border-white/10 bg-white/[0.035] p-3"
+                >
+                  <p className="text-[10px] uppercase tracking-[0.1em] text-white/35">
+                    {summary.label}
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-white">
+                    {summary.value}
+                  </p>
                 </div>
               ))}
             </div>
@@ -948,7 +1172,9 @@ const filamentIds = new Set(
           <section>
             <div className="mb-3 flex items-center gap-2">
               <div className="h-5 w-1 rounded-full bg-[#fd6401]" />
-              <h3 className="text-sm font-semibold text-white">Prazo e observações</h3>
+              <h3 className="text-sm font-semibold text-white">
+                Prazo e observações
+              </h3>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
@@ -957,16 +1183,25 @@ const filamentIds = new Set(
                 label="Prazo de entrega"
                 type="date"
                 value={form.deadline}
-                onChange={(e) => setForm((prev) => ({ ...prev, deadline: e.target.value }))}
+                onChange={(e) =>
+                  setForm((prev) => ({ ...prev, deadline: e.target.value }))
+                }
                 className="border-white/10 bg-white/[0.04] text-white"
               />
               <div>
-                <label htmlFor="notes" className="mb-1.5 block text-sm font-medium text-white/65">Observações</label>
+                <label
+                  htmlFor="notes"
+                  className="mb-1.5 block text-sm font-medium text-white/65"
+                >
+                  Observações
+                </label>
                 <textarea
                   id="notes"
                   rows={3}
                   value={form.notes}
-                  onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, notes: e.target.value }))
+                  }
                   placeholder="Observações sobre o pedido..."
                   className="w-full resize-none rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white outline-none placeholder:text-white/25 focus:border-[rgba(var(--accent-rgb),0.45)]"
                 />
@@ -995,7 +1230,11 @@ const filamentIds = new Set(
               disabled={saving}
               className="bg-gradient-to-r from-[#fd6401] to-[#e95400] text-white shadow-lg shadow-[rgba(var(--accent-rgb),0.12)] ring-1 ring-white/10 hover:brightness-110"
             >
-              {saving ? "Salvando..." : editingOrder ? "Salvar alterações" : "Criar Pedido"}
+              {saving
+                ? "Salvando..."
+                : editingOrder
+                  ? "Salvar alterações"
+                  : "Criar Pedido"}
             </Button>
           </div>
         </form>
