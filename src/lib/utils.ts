@@ -41,6 +41,7 @@ export function formatDateTime(date: string): string {
 
 export function translateStatus(status: string): string {
   const map: Record<string, string> = {
+    financial: "Financeiro",
     pending: "Pendente",
     approved: "Aprovado",
     printing: "Imprimindo",

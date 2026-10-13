@@ -810,7 +810,7 @@ export default function ClientPage() {
                       email: e.target.value,
                     })
                   }
-                  required
+                  
                   className="
                     border-white/10
                     bg-white/[0.04]
@@ -947,7 +947,7 @@ export default function ClientPage() {
                     address: e.target.value,
                   })
                 }
-                required
+                
                 className="
                   border-white/10
                   bg-white/[0.04]

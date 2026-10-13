@@ -97,7 +97,9 @@ export interface Product {
 }
 
 
+
 export type OrderStatus =
+  | "financial"
   | "pending"
   | "approved"
   | "printing"
@@ -105,6 +107,7 @@ export type OrderStatus =
   | "completed"
   | "delivered"
   | "cancelled";
+
 
 export interface Order {
   id: string;

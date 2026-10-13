@@ -45,6 +45,7 @@ import { formatCurrency, formatDate, translateStatus } from "@/lib/utils";
 import { createNotification } from "@/lib/notifications";
 
 const orderStatuses = [
+  { value: "financial", label: "Financeiro" },
   { value: "pending", label: "Pendente" },
   { value: "approved", label: "Aprovado" },
   { value: "printing", label: "Imprimindo" },
@@ -87,6 +88,7 @@ function StatusBadge({ status }: { status: string }) {
     }
   > = {
     draft: { variant: "default", label: "Rascunho" },
+    financial: { variant: "warning", label: "Financeiro" },
     pending: { variant: "warning", label: "Pendente" },
     approved: { variant: "info", label: "Aprovado" },
     printing: { variant: "info", label: "Imprimindo" },
@@ -214,8 +216,12 @@ export default function OrdersPage() {
   }, [orders, search, statusFilter]);
 
   const totalRevenue = orders
-    .filter((order) => order.status !== "cancelled")
-    .reduce((sum, order) => sum + (Number(order.price) || 0), 0);
+  .filter(
+    (order) =>
+      order.status !== "cancelled" &&
+      order.status !== "financial",
+  )
+  .reduce((sum, order) => sum + (Number(order.price) || 0), 0);
 
   const pendingOrders = orders.filter((o) => o.status === "pending").length;
 
