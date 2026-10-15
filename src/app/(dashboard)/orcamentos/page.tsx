@@ -343,16 +343,20 @@ function calcTotal() {
       );
     });
 
-    const subtotal = validItems.reduce((acc, item) => {
-      return (
-        acc +
-        Number(item.quantity) * Number(item.unitPrice)
-      );
-    }, 0);
+    
+const subtotal = validItems.reduce((acc, item) => {
+  return (
+    acc +
+    Number(item.quantity) * Number(item.unitPrice)
+  );
+}, 0);
 
-    const tax = subtotal * 0.1;
-    const total = subtotal + tax;
-    const discountPercent = calcDiscountPercent();
+// Sem imposto automático.
+const tax = 0;
+const total = subtotal;
+
+const discountPercent = calcDiscountPercent();
+
 
     const items: QuoteItem[] = validItems.map((item, idx) => ({
       id: String(idx),
