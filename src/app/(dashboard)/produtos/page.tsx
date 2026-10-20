@@ -30,6 +30,7 @@ import { useProducts } from "@/hooks/useProducts";
 import { formatCurrency, formatDate } from "@/lib/utils";
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const ENERGY_COST_PER_HOUR = 0.17;
 export default function ProductsPage() {
   const { products, loading, create, update, remove } = useProducts();
   const { filaments, loading: filamentsLoading } = useFilaments();
@@ -80,18 +81,32 @@ export default function ProductsPage() {
       ? calculatedColors.reduce((total, color) => total + color.grams, 0)
       : Math.max(0, Number(form.filamentGrams) || 0);
   const basePrice = Math.max(0, Number(form.price) || 0);
-  const finalSalePrice = basePrice + filamentCost;
-  const productionCost =
-    filamentCost +
-    (Number(form.energyCost) || 0) +
-    (Number(form.laborCost) || 0) +
-    (Number(form.packagingCost) || 0);
+
+const printTimeMinutes =
+  Math.max(0, Math.floor(Number(form.printTimeHours) || 0)) * 60 +
+  Math.min(
+    59,
+    Math.max(0, Math.floor(Number(form.printTimeMinutes) || 0)),
+  );
+
+const energyCost = Number(
+  ((printTimeMinutes / 60) * ENERGY_COST_PER_HOUR).toFixed(2),
+);
+
+const finalSalePrice = basePrice;
+
+const productionCost =
+  filamentCost +
+  energyCost +
+  (Number(form.laborCost) || 0) +
+  (Number(form.packagingCost) || 0);
+
+  const estimatedResult = basePrice - productionCost;
   const costFields = [
-    { key: "filamentCost", label: "Custo do filamento" },
-    { key: "energyCost", label: "Custo de energia" },
-    { key: "laborCost", label: "Custo de mão de obra" },
-    { key: "packagingCost", label: "Custo da embalagem" },
-  ] as const;
+  { key: "filamentCost", label: "Custo do filamento" },
+  { key: "laborCost", label: "Custo de mão de obra" },
+  { key: "packagingCost", label: "Custo da embalagem" },
+] as const;
   const filtered = products.filter(
     (product) =>
       product.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -288,7 +303,7 @@ function selectStockFilament(
       const data = {
         name: form.name.trim(),
         description: form.description.trim() || undefined,
-        price: Number(finalSalePrice.toFixed(2)),
+        price: Number(basePrice.toFixed(2)),
         basePrice: Number(basePrice.toFixed(2)),
         printTimeMinutes,
         filamentGrams: Number(totalFilamentGrams.toFixed(2)),
@@ -298,7 +313,7 @@ function selectStockFilament(
         })),
         productUrl: form.productUrl.trim() || undefined,
         filamentCost: Number(filamentCost.toFixed(2)),
-        energyCost: Math.max(0, Number(form.energyCost) || 0),
+        energyCost,
         laborCost: Math.max(0, Number(form.laborCost) || 0),
         packagingCost: Math.max(0, Number(form.packagingCost) || 0),
         imageUrl,
@@ -1000,10 +1015,10 @@ function selectStockFilament(
                 </div>
                 <div className="rounded-xl border border-white/10 bg-white/[0.025] p-3">
                   <p className="text-xs text-white/40">
-                    Preço de venda calculado
+                    Preço-Base de Venda
                   </p>
                   <p className="mt-1 text-sm font-semibold text-[var(--accent)]">
-                    {formatCurrency(finalSalePrice)}
+                    {formatCurrency(basePrice)}
                   </p>
                 </div>
               </div>
@@ -1078,15 +1093,15 @@ function selectStockFilament(
                 </span>
                 <span
                   className={`text-sm font-semibold ${
-                    finalSalePrice - productionCost >= 0
+                    estimatedResult >= 0
                       ? "text-emerald-400"
                       : "text-red-400"
                   }`}
                 >
-                  {(finalSalePrice - productionCost).toLocaleString("pt-BR", {
-                    style: "currency",
-                    currency: "BRL",
-                  })}
+                  {estimatedResult.toLocaleString("pt-BR", {
+  style: "currency",
+  currency: "BRL",
+})}
                 </span>
               </div>
             </div>
