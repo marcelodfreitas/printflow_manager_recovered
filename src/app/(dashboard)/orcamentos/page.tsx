@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 
 import logo from "@/assets/logo.png";
+import { createClient } from "@/lib/supabase/client";
 
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
@@ -447,21 +448,83 @@ const discountPercent = calcDiscountPercent();
     const pixTotal = total - discountAmount;
 
     let logoData: string | null = null;
+    let companyLogoUrl: string | null = null;
+    let companyName = "PrintFlow";
 
+    // A logo e o nome da empresa são os configurados em Settings > Company.
     try {
-      const response = await fetch(logo.src);
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("company_logo_url, company_name")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        companyLogoUrl = profile?.company_logo_url ?? null;
+        companyName = profile?.company_name?.trim() || (companyLogoUrl ? "" : "PrintFlow");
+      }
+    } catch (error) {
+      console.error("Não foi possível carregar os dados da empresa para o PDF:", error);
+    }
+
+    // Converte a imagem para PNG, formato aceito pelo jsPDF, mesmo que o
+    // arquivo original esteja em JPG ou WebP.
+    async function imageUrlToPngDataUrl(url: string): Promise<string> {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Falha ao carregar imagem (${response.status})`);
+      }
+
       const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
 
-      logoData = await new Promise<string>((resolve) => {
-        const reader = new FileReader();
+      try {
+        const image = new Image();
+        image.src = objectUrl;
 
-        reader.onloadend = () =>
-          resolve(reader.result as string);
+        await new Promise<void>((resolve, reject) => {
+          image.onload = () => resolve();
+          image.onerror = () => reject(new Error("Não foi possível ler a imagem da empresa."));
+        });
 
-        reader.readAsDataURL(blob);
-      });
-    } catch {
-      logoData = null;
+        const canvas = document.createElement("canvas");
+        canvas.width = image.naturalWidth;
+        canvas.height = image.naturalHeight;
+
+        const context = canvas.getContext("2d");
+        if (!context) {
+          throw new Error("Não foi possível converter a logo.");
+        }
+
+        context.drawImage(image, 0, 0);
+        return canvas.toDataURL("image/png");
+      } finally {
+        URL.revokeObjectURL(objectUrl);
+      }
+    }
+
+    // Prioriza a logo da empresa; usa a logo padrão do PrintFlow apenas
+    // se ainda não houver logo cadastrada ou se ela não puder ser carregada.
+    if (companyLogoUrl) {
+      try {
+        logoData = await imageUrlToPngDataUrl(companyLogoUrl);
+      } catch (error) {
+        console.error("Não foi possível carregar a logo da empresa:", error);
+      }
+    }
+
+    if (!logoData) {
+      try {
+        logoData = await imageUrlToPngDataUrl(logo.src);
+        if (!companyName) companyName = "PrintFlow";
+      } catch {
+        logoData = null;
+      }
     }
 
     doc.setFillColor(10, 17, 32);
@@ -471,34 +534,29 @@ const discountPercent = calcDiscountPercent();
     doc.rect(0, 27, 210, 1.2, "F");
 
     if (logoData) {
-      doc.addImage(
-        logoData,
-        "PNG",
-        14,
-        5,
-        17,
-        17,
-      );
+      doc.addImage(logoData, "PNG", 14, 5, 17, 17);
     }
+
+    const brandX = logoData ? 37 : 14;
+    const brandMaxWidth = 142 - brandX;
 
     doc.setTextColor(255, 255, 255);
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(16);
+    doc.setFontSize(14);
 
-    doc.text(
-      "PrintFlow",
-      logoData ? 37 : 14,
-      14,
-    );
+    if (companyName) {
+      doc.text(companyName, brandX, 14, { maxWidth: brandMaxWidth });
+    }
 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
     doc.setTextColor(253, 100, 1);
 
     doc.text(
-      "Orçamento de impressão 3D",
-      logoData ? 37 : 14,
+      "Orçamento",
+      brandX,
       20,
+      { maxWidth: brandMaxWidth },
     );
 
     doc.setTextColor(180, 190, 205);
@@ -968,9 +1026,9 @@ const discountPercent = calcDiscountPercent();
                       Itens
                     </TableHeadCell>
 
-                    <TableHeadCell className="text-right text-white/40">
+                    {/* <TableHeadCell className="text-right text-white/40">
                       Subtotal
-                    </TableHeadCell>
+                    </TableHeadCell> */}
 
                     <TableHeadCell className="text-right text-white/40">
                       Total
@@ -984,9 +1042,9 @@ const discountPercent = calcDiscountPercent();
                       Validade
                     </TableHeadCell>
 
-                    <TableHeadCell className="text-center text-white/40">
+                    {/* <TableHeadCell className="text-center text-white/40">
                       Criação
-                    </TableHeadCell>
+                    </TableHeadCell> */}
 
                     <TableHeadCell className="text-right text-white/40">
                       Ações
@@ -1030,11 +1088,11 @@ const discountPercent = calcDiscountPercent();
                         </span>
                       </TableCell>
 
-                      <TableCell className="text-right text-sm text-white/50">
+                      {/* <TableCell className="text-right text-sm text-white/50">
                         {formatCurrency(
                           Number(quote.subtotal ?? 0),
                         )}
-                      </TableCell>
+                      </TableCell> */}
 
                       <TableCell className="text-right">
                         <span className="text-sm font-semibold text-white">
@@ -1052,9 +1110,9 @@ const discountPercent = calcDiscountPercent();
                         {formatDate(quote.validUntil)}
                       </TableCell>
 
-                      <TableCell className="text-center text-xs text-white/35">
+                      {/* <TableCell className="text-center text-xs text-white/35">
                         {formatDate(quote.createdAt)}
-                      </TableCell>
+                      </TableCell> */}
 
                       <TableCell>
                         <div className="flex justify-end gap-1.5">

@@ -455,9 +455,9 @@ function selectStockFilament(
                         <TableHeadCell className="text-left text-[11px] font-medium uppercase tracking-wider text-white/35">
                           Produto
                         </TableHeadCell>
-                        <TableHeadCell className="text-left text-[11px] font-medium uppercase tracking-wider text-white/35">
+                        {/* <TableHeadCell className="text-left text-[11px] font-medium uppercase tracking-wider text-white/35">
                           Descrição
-                        </TableHeadCell>
+                        </TableHeadCell> */}
                         <TableHeadCell className="text-center text-[11px] font-medium uppercase tracking-wider text-white/35">
                           Impressão
                         </TableHeadCell>
@@ -502,11 +502,11 @@ function selectStockFilament(
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell className="max-w-[280px] py-4">
+                          {/* <TableCell className="max-w-[280px] py-4">
                             <p className="truncate text-sm text-white/45">
                               {product.description || "Sem descrição"}
                             </p>
-                          </TableCell>
+                          </TableCell> */}
                           <TableCell className="py-4 text-center">
                             <span className="text-sm font-medium text-white">
                               {formatPrintTime(product.printTimeMinutes)}

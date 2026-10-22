@@ -10,6 +10,7 @@ import {
   ShoppingBag,
   Trash2,
   Weight,
+  PackagePlus,
 } from "lucide-react";
 
 import Button from "@/components/ui/Button";
@@ -65,6 +66,7 @@ export default function FilamentsPage() {
     create,
     update,
     remove,
+    addStockEntry,
   } = useFilaments();
 
   const [search, setSearch] = useState("");
@@ -73,6 +75,20 @@ export default function FilamentsPage() {
     useState<Filament | null>(null);
 
   const [form, setForm] = useState(emptyForm);
+
+  // Estado do modal de entrada de estoque
+  const [stockModalOpen, setStockModalOpen] = useState(false);
+  const [stockFilament, setStockFilament] =
+    useState<Filament | null>(null);
+  const [stockSaving, setStockSaving] = useState(false);
+  const [stockError, setStockError] = useState("");
+
+  const [stockForm, setStockForm] = useState({
+    quantity: "1",
+    purchaseDate: new Date().toLocaleDateString("en-CA"),
+    totalCost: "",
+    supplier: "",
+  });
 
   const filtered = useMemo(() => {
     const term = search.toLowerCase().trim();
@@ -154,29 +170,11 @@ export default function FilamentsPage() {
       quantity: Number(form.quantity),
       costPerKg: Number(form.costPerKg),
       purchaseDate: form.purchaseDate || undefined,
-      purchaseStore:
-        form.purchaseStore.trim() || undefined,
+      purchaseStore: form.purchaseStore.trim() || undefined,
     };
 
     if (editingFilament) {
-      const weightChanged =
-        data.weight !== editingFilament.weight;
-
-      const quantityChanged =
-        data.quantity !== editingFilament.quantity;
-
-      const updateData: typeof data & {
-        remainingWeight?: number;
-      } = {
-        ...data,
-      };
-
-      if (weightChanged || quantityChanged) {
-        updateData.remainingWeight =
-          data.weight * data.quantity;
-      }
-
-      await update(editingFilament.id, updateData);
+      await update(editingFilament.id, data);
     } else {
       await create(data);
     }
@@ -191,6 +189,72 @@ export default function FilamentsPage() {
       )
     ) {
       remove(id);
+    }
+  }
+
+  // Abre o modal para registrar a compra de um filamento existente
+  function openStockEntry(filament: Filament) {
+    setStockFilament(filament);
+    setStockError("");
+
+    setStockForm({
+      quantity: "1",
+      purchaseDate: new Date().toLocaleDateString("en-CA"),
+      totalCost: "",
+      supplier: "",
+    });
+
+    setStockModalOpen(true);
+  }
+
+  // Registra a entrada e soma os rolos ao estoque existente
+  async function handleStockEntry(e: React.FormEvent) {
+    e.preventDefault();
+
+    if (!stockFilament) return;
+
+    const quantity = Number(stockForm.quantity);
+    const totalCost = Number(stockForm.totalCost);
+
+    if (!Number.isInteger(quantity) || quantity < 1) {
+      setStockError("Informe uma quantidade válida de rolos.");
+      return;
+    }
+
+    if (!Number.isFinite(totalCost) || totalCost < 0) {
+      setStockError("Informe um valor total válido para a compra.");
+      return;
+    }
+
+    if (!stockForm.purchaseDate) {
+      setStockError("Informe a data da compra.");
+      return;
+    }
+
+    setStockSaving(true);
+    setStockError("");
+
+    try {
+      await addStockEntry({
+        filamentId: stockFilament.id,
+        quantity,
+        purchaseDate: stockForm.purchaseDate,
+        totalCost,
+        supplier: stockForm.supplier.trim(),
+      });
+
+      setStockModalOpen(false);
+      setStockFilament(null);
+    } catch (error) {
+      console.error(error);
+
+      setStockError(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível registrar a entrada de estoque.",
+      );
+    } finally {
+      setStockSaving(false);
     }
   }
 
@@ -236,10 +300,7 @@ export default function FilamentsPage() {
       <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.045)_1px,transparent_0)] bg-[size:32px_32px]" />
 
       <div className="space-y-6 px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
-
-        {/* =====================================================
-            HEADER
-        ====================================================== */}
+        {/* HEADER */}
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <div className="mb-2 flex items-center gap-2">
@@ -286,11 +347,8 @@ export default function FilamentsPage() {
           </Button>
         </div>
 
-        {/* =====================================================
-            STATS
-        ====================================================== */}
+        {/* INDICADORES */}
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-
           <Card className="border border-white/10 bg-white/[0.025] shadow-xl shadow-black/20 backdrop-blur-2xl">
             <CardContent className="p-5">
               <div className="flex items-start justify-between">
@@ -407,14 +465,10 @@ export default function FilamentsPage() {
           </Card>
         </div>
 
-        {/* =====================================================
-            TABLE / LIST
-        ====================================================== */}
+        {/* LISTA DE FILAMENTOS */}
         <Card className="overflow-hidden border border-white/10 bg-white/[0.025] shadow-2xl shadow-black/30 backdrop-blur-2xl">
-
           <CardHeader className="border-b border-white/[0.06] bg-white/[0.01]">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-
               <div>
                 <h2 className="text-sm font-semibold text-white">
                   Seus filamentos
@@ -436,9 +490,7 @@ export default function FilamentsPage() {
                   type="text"
                   placeholder="Buscar filamento..."
                   value={search}
-                  onChange={(e) =>
-                    setSearch(e.target.value)
-                  }
+                  onChange={(e) => setSearch(e.target.value)}
                   className="
                     h-10
                     w-full
@@ -464,7 +516,6 @@ export default function FilamentsPage() {
           </CardHeader>
 
           <CardContent className="p-0">
-
             {loading ? (
               <div className="flex min-h-[280px] items-center justify-center">
                 <div className="flex items-center gap-3 text-sm text-white/40">
@@ -474,9 +525,7 @@ export default function FilamentsPage() {
               </div>
             ) : (
               <>
-                {/* =================================================
-                    MOBILE
-                ================================================== */}
+                {/* VISUALIZAÇÃO MOBILE */}
                 <div className="space-y-3 p-4 md:hidden">
                   {filtered.map((filament) => (
                     <div
@@ -493,13 +542,11 @@ export default function FilamentsPage() {
                       "
                     >
                       <div className="flex items-start justify-between gap-3">
-
                         <div className="flex min-w-0 items-center gap-3">
                           <div
                             className="h-10 w-10 shrink-0 rounded-xl border border-white/10 shadow-inner"
                             style={{
-                              backgroundColor:
-                                filament.colorHex,
+                              backgroundColor: filament.colorHex,
                             }}
                           />
 
@@ -520,9 +567,16 @@ export default function FilamentsPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() =>
-                              openEdit(filament)
-                            }
+                            onClick={() => openStockEntry(filament)}
+                            className="h-9 w-9 rounded-lg border border-white/10 bg-white/[0.03] p-0 text-[var(--accent)] hover:border-[rgba(var(--accent-rgb),0.35)] hover:bg-[rgba(var(--accent-rgb),0.08)]"
+                          >
+                            <PackagePlus className="h-4 w-4" />
+                          </Button>
+
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openEdit(filament)}
                             className="
                               h-9
                               w-9
@@ -543,9 +597,7 @@ export default function FilamentsPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() =>
-                              handleDelete(filament.id)
-                            }
+                            onClick={() => handleDelete(filament.id)}
                             className="
                               h-9
                               w-9
@@ -590,9 +642,7 @@ export default function FilamentsPage() {
                           </p>
 
                           <p className="mt-1 text-sm font-semibold text-white">
-                            {formatCurrency(
-                              filament.costPerKg,
-                            )}
+                            {formatCurrency(filament.costPerKg)}
                           </p>
                         </div>
 
@@ -636,9 +686,7 @@ export default function FilamentsPage() {
                               <span className="shrink-0 text-[11px] text-white/30">
                                 {new Date(
                                   `${filament.purchaseDate}T12:00:00`,
-                                ).toLocaleDateString(
-                                  "pt-BR",
-                                )}
+                                ).toLocaleDateString("pt-BR")}
                               </span>
                             )}
                           </div>
@@ -668,9 +716,7 @@ export default function FilamentsPage() {
                   )}
                 </div>
 
-                {/* =================================================
-                    DESKTOP
-                ================================================== */}
+                {/* VISUALIZAÇÃO DESKTOP */}
                 <div className="hidden overflow-x-auto md:block">
                   <Table>
                     <TableHead className="border-b border-white/[0.06]">
@@ -679,17 +725,17 @@ export default function FilamentsPage() {
                           Filamento
                         </TableHeadCell>
 
-                        <TableHeadCell className="text-center text-[10px] font-medium uppercase tracking-wider text-white/30">
+                        {/* <TableHeadCell className="text-center text-[10px] font-medium uppercase tracking-wider text-white/30">
                           Cor
-                        </TableHeadCell>
+                        </TableHeadCell> */}
 
                         <TableHeadCell className="text-center text-[10px] font-medium uppercase tracking-wider text-white/30">
                           Tipo
                         </TableHeadCell>
 
-                        <TableHeadCell className="text-center text-[10px] font-medium uppercase tracking-wider text-white/30">
+                        {/* <TableHeadCell className="text-center text-[10px] font-medium uppercase tracking-wider text-white/30">
                           Diâmetro
-                        </TableHeadCell>
+                        </TableHeadCell> */}
 
                         <TableHeadCell className="text-center text-[10px] font-medium uppercase tracking-wider text-white/30">
                           Estoque
@@ -730,8 +776,7 @@ export default function FilamentsPage() {
                               <div
                                 className="h-9 w-9 shrink-0 rounded-lg border border-white/10"
                                 style={{
-                                  backgroundColor:
-                                    filament.colorHex,
+                                  backgroundColor: filament.colorHex,
                                 }}
                               />
 
@@ -747,7 +792,7 @@ export default function FilamentsPage() {
                             </div>
                           </TableCell>
 
-                          <TableCell className="text-center">
+                          {/* <TableCell className="text-center">
                             <div className="inline-flex items-center gap-2">
                               <Circle
                                 className="h-3.5 w-3.5"
@@ -759,7 +804,7 @@ export default function FilamentsPage() {
                                 {filament.color}
                               </span>
                             </div>
-                          </TableCell>
+                          </TableCell> */}
 
                           <TableCell className="text-center">
                             <span className="rounded-md border border-white/[0.06] bg-white/[0.025] px-2 py-1 text-[11px] font-medium text-white/60">
@@ -767,9 +812,9 @@ export default function FilamentsPage() {
                             </span>
                           </TableCell>
 
-                          <TableCell className="text-center text-xs text-white/55">
+                          {/* <TableCell className="text-center text-xs text-white/55">
                             {filament.diameter}mm
-                          </TableCell>
+                          </TableCell> */}
 
                           <TableCell className="text-center">
                             <div>
@@ -782,9 +827,7 @@ export default function FilamentsPage() {
                               </p>
 
                               <p className="mt-0.5 text-[10px] text-white/25">
-                                {getStockLabel(
-                                  filament,
-                                )}
+                                {getStockLabel(filament)}
                               </p>
                             </div>
                           </TableCell>
@@ -795,9 +838,7 @@ export default function FilamentsPage() {
 
                           <TableCell className="text-center">
                             <span className="text-sm font-medium text-white/75">
-                              {formatCurrency(
-                                filament.costPerKg,
-                              )}
+                              {formatCurrency(filament.costPerKg)}
                             </span>
                           </TableCell>
 
@@ -814,9 +855,7 @@ export default function FilamentsPage() {
                                   <p className="mt-0.5 text-[10px] text-white/25">
                                     {new Date(
                                       `${filament.purchaseDate}T12:00:00`,
-                                    ).toLocaleDateString(
-                                      "pt-BR",
-                                    )}
+                                    ).toLocaleDateString("pt-BR")}
                                   </p>
                                 )}
                               </div>
@@ -832,9 +871,16 @@ export default function FilamentsPage() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() =>
-                                  openEdit(filament)
-                                }
+                                onClick={() => openStockEntry(filament)}
+                                className="h-9 w-9 rounded-lg border border-white/10 bg-white/[0.025] p-0 text-[var(--accent)] hover:border-[rgba(var(--accent-rgb),0.35)] hover:bg-[rgba(var(--accent-rgb),0.08)]"
+                              >
+                                <PackagePlus className="h-4 w-4" />
+                              </Button>
+
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => openEdit(filament)}
                                 className="
                                   h-9
                                   w-9
@@ -855,11 +901,7 @@ export default function FilamentsPage() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() =>
-                                  handleDelete(
-                                    filament.id,
-                                  )
-                                }
+                                onClick={() => handleDelete(filament.id)}
                                 className="
                                   h-9
                                   w-9
@@ -894,9 +936,7 @@ export default function FilamentsPage() {
                               {search && (
                                 <button
                                   type="button"
-                                  onClick={() =>
-                                    setSearch("")
-                                  }
+                                  onClick={() => setSearch("")}
                                   className="mt-2 text-xs text-[var(--accent)] hover:underline"
                                 >
                                   Limpar busca
@@ -916,7 +956,173 @@ export default function FilamentsPage() {
       </div>
 
       {/* =========================================================
-          MODAL
+          MODAL DAR ENTRADA NO ESTOQUE
+      ========================================================== */}
+      <Modal
+        isOpen={stockModalOpen}
+        onClose={() => {
+          if (!stockSaving) {
+            setStockModalOpen(false);
+          }
+        }}
+        title="Dar entrada no estoque"
+        size="md"
+      >
+        <form onSubmit={handleStockEntry} className="space-y-5">
+          {/* Filamento selecionado */}
+          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+            <p className="text-xs uppercase tracking-wider text-white/35">
+              Filamento selecionado
+            </p>
+
+            <div className="mt-2 flex items-center gap-3">
+              <div
+                className="h-10 w-10 rounded-xl border border-white/10"
+                style={{
+                  backgroundColor: stockFilament?.colorHex ?? "#000000",
+                }}
+              />
+
+              <div>
+                <p className="text-sm font-semibold text-white">
+                  {stockFilament?.name ?? "Selecione um filamento"}
+                </p>
+
+                <p className="mt-1 text-xs text-white/40">
+                  Estoque atual:{" "}
+                  {stockFilament ? stockOf(stockFilament) : 0}g
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <p className="text-sm leading-relaxed text-white/45">
+            Informe os dados da nova compra. Os rolos serão somados
+            ao estoque deste filamento, sem criar um cadastro duplicado.
+          </p>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Input
+              id="stockQuantity"
+              label="Quantidade de rolos"
+              type="number"
+              min="1"
+              step="1"
+              value={stockForm.quantity}
+              onChange={(e) =>
+                setStockForm({
+                  ...stockForm,
+                  quantity: e.target.value,
+                })
+              }
+              required
+              className="border-white/10 bg-white/[0.04] text-white"
+            />
+
+            <Input
+              id="stockPurchaseDate"
+              label="Data da compra"
+              type="date"
+              value={stockForm.purchaseDate}
+              onChange={(e) =>
+                setStockForm({
+                  ...stockForm,
+                  purchaseDate: e.target.value,
+                })
+              }
+              required
+              className="border-white/10 bg-white/[0.04] text-white"
+            />
+
+            <Input
+              id="stockTotalCost"
+              label="Valor total da compra (R$)"
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="Ex.: 259,80"
+              value={stockForm.totalCost}
+              onChange={(e) =>
+                setStockForm({
+                  ...stockForm,
+                  totalCost: e.target.value,
+                })
+              }
+              required
+              className="border-white/10 bg-white/[0.04] text-white"
+            />
+
+            <Input
+              id="stockSupplier"
+              label="Loja / fornecedor"
+              placeholder="Ex.: Loja de filamentos"
+              value={stockForm.supplier}
+              onChange={(e) =>
+                setStockForm({
+                  ...stockForm,
+                  supplier: e.target.value,
+                })
+              }
+              className="border-white/10 bg-white/[0.04] text-white"
+            />
+          </div>
+
+          {/* Prévia da quantidade adicionada */}
+          {stockFilament && Number(stockForm.quantity) > 0 && (
+            <div className="rounded-xl border border-[rgba(var(--accent-rgb),0.2)] bg-[rgba(var(--accent-rgb),0.05)] p-4">
+              <p className="text-xs text-white/45">
+                Estoque após a entrada
+              </p>
+
+              <p className="mt-1 text-lg font-semibold text-white">
+                {(
+                  stockOf(stockFilament) +
+                  Number(stockForm.quantity) * stockFilament.weight
+                ).toLocaleString("pt-BR")}
+                g
+              </p>
+
+              <p className="mt-1 text-xs text-white/35">
+                +{" "}
+                {(
+                  Number(stockForm.quantity) * stockFilament.weight
+                ).toLocaleString("pt-BR")}
+                g adicionados
+              </p>
+            </div>
+          )}
+
+          {stockError && (
+            <p className="rounded-lg border border-red-500/20 bg-red-500/[0.06] px-3 py-2 text-sm text-red-300">
+              {stockError}
+            </p>
+          )}
+
+          <div className="flex flex-col-reverse gap-3 border-t border-white/[0.06] pt-5 sm:flex-row sm:justify-end">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setStockModalOpen(false)}
+              disabled={stockSaving}
+              className="border border-white/10 bg-white/[0.04] text-white/65"
+            >
+              Cancelar
+            </Button>
+
+            <Button
+              type="submit"
+              disabled={stockSaving}
+              className="bg-gradient-to-r from-[#071124] to-[#0d1a35] text-white ring-1 ring-white/10 hover:ring-[rgba(var(--accent-rgb),0.35)]"
+            >
+              <PackagePlus className="mr-2 h-4 w-4" />
+              {stockSaving ? "Registrando..." : "Registrar entrada"}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* =========================================================
+          MODAL NOVO / EDITAR FILAMENTO
       ========================================================== */}
       <Modal
         isOpen={modalOpen}
@@ -928,11 +1134,7 @@ export default function FilamentsPage() {
         }
         size="lg"
       >
-        <form
-          onSubmit={handleSave}
-          className="space-y-6"
-        >
-
+        <form onSubmit={handleSave} className="space-y-6">
           {/* Informações principais */}
           <div>
             <div className="mb-4">
@@ -941,8 +1143,7 @@ export default function FilamentsPage() {
               </h3>
 
               <p className="mt-1 text-xs text-white/35">
-                Cadastre as características e o custo do
-                material.
+                Cadastre as características e o custo do material.
               </p>
             </div>
 
@@ -991,68 +1192,68 @@ export default function FilamentsPage() {
             </div>
 
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
-  <div>
-    <label
-      htmlFor="color"
-      className="mb-1.5 block text-sm font-medium text-white/65"
-    >
-      Cor
-    </label>
+              <div>
+                <label
+                  htmlFor="color"
+                  className="mb-1.5 block text-sm font-medium text-white/65"
+                >
+                  Cor
+                </label>
 
-    <div className="flex h-12 mt-1 items-center gap-3 rounded-full border border-white/10 bg-white/[0.04] px-2.5 focus-within:border-[rgba(var(--accent-rgb),0.45)]">
-      <input
-        id="colorHex"
-        type="color"
-        value={form.colorHex}
-        onChange={(e) =>
-          setForm({
-            ...form,
-            colorHex: e.target.value,
-          })
-        }
-        className="h-6 w-6 shrink-0 cursor-pointer rounded-md border border-white/10 bg-transparent p-0"
-        title="Escolher cor"
-      />
+                <div className="mt-1 flex h-12 items-center gap-3 rounded-full border border-white/10 bg-white/[0.04] px-2.5 focus-within:border-[rgba(var(--accent-rgb),0.45)]">
+                  <input
+                    id="colorHex"
+                    type="color"
+                    value={form.colorHex}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        colorHex: e.target.value,
+                      })
+                    }
+                    className="h-6 w-6 shrink-0 cursor-pointer rounded-md border border-white/10 bg-transparent p-0"
+                    title="Escolher cor"
+                  />
 
-      <input
-        id="color"
-        type="text"
-        value={form.color}
-        onChange={(e) =>
-          setForm({
-            ...form,
-            color: e.target.value,
-          })
-        }
-        placeholder="Ex.: Preto"
-        className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/25"
-        required
-      />
-    </div>
-  </div>
+                  <input
+                    id="color"
+                    type="text"
+                    value={form.color}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        color: e.target.value,
+                      })
+                    }
+                    placeholder="Ex.: Preto"
+                    className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/25"
+                    required
+                  />
+                </div>
+              </div>
 
-  <Input
-    id="manufacturer"
-    label="Fabricante"
-    placeholder="Ex.: 3D Prime"
-    value={form.manufacturer}
-    onChange={(e) =>
-      setForm({
-        ...form,
-        manufacturer: e.target.value,
-      })
-    }
-    required
-    className="
-      border-white/10
-      bg-white/[0.04]
-      text-white
-      placeholder:text-white/25
-      focus:border-[rgba(var(--accent-rgb),0.45)]
-      focus:ring-[rgba(var(--accent-rgb),0.15)]
-    "
-  />
-</div>
+              <Input
+                id="manufacturer"
+                label="Fabricante"
+                placeholder="Ex.: 3D Prime"
+                value={form.manufacturer}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    manufacturer: e.target.value,
+                  })
+                }
+                required
+                className="
+                  border-white/10
+                  bg-white/[0.04]
+                  text-white
+                  placeholder:text-white/25
+                  focus:border-[rgba(var(--accent-rgb),0.45)]
+                  focus:ring-[rgba(var(--accent-rgb),0.15)]
+                "
+              />
+            </div>
 
             <div className="mt-4 grid gap-4 sm:grid-cols-3">
               <Input
@@ -1083,7 +1284,7 @@ export default function FilamentsPage() {
                 id="weight"
                 label="Peso (g)"
                 type="number"
-                min="0"
+                min="1"
                 value={form.weight}
                 onChange={(e) =>
                   setForm({
@@ -1154,11 +1355,8 @@ export default function FilamentsPage() {
             </div>
           </div>
 
-          {/* =====================================================
-              INFORMAÇÕES DA COMPRA
-          ====================================================== */}
+          {/* INFORMAÇÕES DA COMPRA */}
           <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 sm:p-5">
-
             <div className="mb-4 flex items-start justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2">
@@ -1172,8 +1370,8 @@ export default function FilamentsPage() {
                 </div>
 
                 <p className="mt-1 text-xs leading-relaxed text-white/35">
-                  Registre onde e quando comprou para
-                  comparar preços na próxima reposição.
+                  Registre onde e quando comprou para comparar preços
+                  na próxima reposição.
                 </p>
               </div>
 
@@ -1226,9 +1424,7 @@ export default function FilamentsPage() {
             </div>
           </div>
 
-          {/* =====================================================
-              ACTIONS
-          ====================================================== */}
+          {/* AÇÕES DO MODAL */}
           <div className="flex flex-col-reverse gap-3 border-t border-white/[0.06] pt-5 sm:flex-row sm:justify-end">
             <Button
               type="button"

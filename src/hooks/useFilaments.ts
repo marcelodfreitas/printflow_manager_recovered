@@ -11,6 +11,8 @@ export function useFilaments() {
   const [filaments, setFilaments] = useState<Filament[]>([]);
   const [loading, setLoading] = useState(true);
 
+  
+
   const fetchFilaments = useCallback(async () => {
     setLoading(true);
     try {
@@ -135,13 +137,46 @@ export function useFilaments() {
     return null;
   }
 
+async function addStockEntry(input: {
+  filamentId: string;
+  quantity: number;
+  purchaseDate: string;
+  totalCost: number;
+  supplier: string;
+}) {
+  try {
+    const { data, error } = await supabase.rpc(
+      "add_filament_stock_entry",
+      {
+        p_filament_id: input.filamentId,
+        p_quantity: input.quantity,
+        p_purchase_date: input.purchaseDate || null,
+        p_total_cost: input.totalCost,
+        p_supplier: input.supplier.trim() || null,
+      },
+    );
+
+    if (error) {
+      console.error("Erro ao registrar entrada de filamento:", error);
+      throw error;
+    }
+
+    await fetchFilaments();
+    return data;
+  } catch (err) {
+    console.error("Erro ao registrar entrada de filamento:", err);
+    throw err;
+  }
+}
+
   return {
-    filaments,
-    loading,
-    fetchFilaments,
-    create,
-    update,
-    remove,
-    adjustStock,
-  };
+  filaments,
+  loading,
+  fetchFilaments,
+  create,
+  update,
+  remove,
+  adjustStock,
+  addStockEntry,
+};
 }

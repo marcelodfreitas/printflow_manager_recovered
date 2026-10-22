@@ -667,7 +667,7 @@ export default function OrdersPage() {
                         <TableHeadCell>Pedido</TableHeadCell>
                         <TableHeadCell>Produtos</TableHeadCell>
                         <TableHeadCell>Cliente</TableHeadCell>
-                        <TableHeadCell>Produção</TableHeadCell>
+                        {/* <TableHeadCell>Produção</TableHeadCell> */}
                         <TableHeadCell>Qtd.</TableHeadCell>
                         <TableHeadCell>Valor</TableHeadCell>
                         <TableHeadCell>Status</TableHeadCell>
@@ -685,9 +685,9 @@ export default function OrdersPage() {
                         >
                           <TableCell>
                             <div className="flex items-center gap-3">
-                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-[rgba(var(--accent-rgb),0.9)]">
+                              {/* <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-[rgba(var(--accent-rgb),0.9)]">
                                 <PackageCheck className="h-4 w-4" />
-                              </div>
+                              </div> */}
                               <div>
                                 <p className="font-mono text-xs font-semibold text-white">
                                   #{order.orderNumber ?? order.id.slice(0, 7)}
@@ -722,7 +722,7 @@ export default function OrdersPage() {
                               </span>
                             </div>
                           </TableCell>
-                          <TableCell>
+                          {/* <TableCell>
                             <div className="max-w-[150px]">
                               <div className="flex items-center gap-1.5">
                                 <Printer className="h-3.5 w-3.5 text-white/30" />
@@ -737,7 +737,7 @@ export default function OrdersPage() {
                                 </span>
                               </div>
                             </div>
-                          </TableCell>
+                          </TableCell> */}
                           <TableCell>
                             <span className="text-xs font-medium text-white/70">
                               {order.quantity}
