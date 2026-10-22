@@ -57,6 +57,7 @@ const emptyForm = {
   costPerKg: "",
   purchaseDate: "",
   purchaseStore: "",
+  remainingWeight: "0",
 };
 
 export default function FilamentsPage() {
@@ -67,6 +68,7 @@ export default function FilamentsPage() {
     update,
     remove,
     addStockEntry,
+    adjustStock,
   } = useFilaments();
 
   const [search, setSearch] = useState("");
@@ -151,10 +153,22 @@ export default function FilamentsPage() {
       costPerKg: String(filament.costPerKg),
       purchaseDate: filament.purchaseDate ?? "",
       purchaseStore: filament.purchaseStore ?? "",
+      remainingWeight: String(stockOf(filament)),
     });
 
     setModalOpen(true);
   }
+
+
+  const [editStockModalOpen, setEditStockModalOpen] =
+  useState(false);
+
+const [editStockFilament, setEditStockFilament] =
+  useState<Filament | null>(null);
+
+const [editStockWeight, setEditStockWeight] = useState("");
+const [editStockSaving, setEditStockSaving] = useState(false);
+const [editStockError, setEditStockError] = useState("");
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -171,6 +185,7 @@ export default function FilamentsPage() {
       costPerKg: Number(form.costPerKg),
       purchaseDate: form.purchaseDate || undefined,
       purchaseStore: form.purchaseStore.trim() || undefined,
+      remainingWeight: Number(form.remainingWeight),
     };
 
     if (editingFilament) {
@@ -257,6 +272,68 @@ export default function FilamentsPage() {
       setStockSaving(false);
     }
   }
+
+  
+  // Abre o modal para editar o peso disponível
+  function openEditStock(filament: Filament) {
+    setEditStockFilament(filament);
+    setEditStockWeight(String(stockOf(filament)));
+    setEditStockError("");
+    setEditStockModalOpen(true);
+  }
+
+  // Salva o novo peso disponível
+  async function handleEditStock(e: React.FormEvent) {
+    e.preventDefault();
+
+    if (!editStockFilament) return;
+
+    const targetWeight = Number(editStockWeight);
+    const currentWeight = stockOf(editStockFilament);
+    const maxWeight =
+      editStockFilament.weight * editStockFilament.quantity;
+
+    if (
+      editStockWeight.trim() === "" ||
+      !Number.isFinite(targetWeight) ||
+      targetWeight < 0
+    ) {
+      setEditStockError("Informe um peso válido, igual ou superior a zero.");
+      return;
+    }
+
+    if (targetWeight > maxWeight) {
+      setEditStockError(
+        `O estoque máximo é ${maxWeight.toLocaleString("pt-BR")} g.`,
+      );
+      return;
+    }
+
+    setEditStockSaving(true);
+    setEditStockError("");
+
+    try {
+      const deltaGrams = targetWeight - currentWeight;
+
+      if (deltaGrams !== 0) {
+        await adjustStock(editStockFilament.id, deltaGrams);
+      }
+
+      setEditStockModalOpen(false);
+      setEditStockFilament(null);
+    } catch (error) {
+      console.error(error);
+
+      setEditStockError(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível atualizar o estoque.",
+      );
+    } finally {
+      setEditStockSaving(false);
+    }
+  }
+
 
   function getStockClass(filament: Filament) {
     const stock = stockOf(filament);
@@ -572,6 +649,15 @@ export default function FilamentsPage() {
                           >
                             <PackagePlus className="h-4 w-4" />
                           </Button>
+
+                          <Button
+  variant="ghost"
+  size="sm"
+  onClick={() => openEditStock(filament)}
+  className="h-9 w-9 rounded-lg border border-white/10 bg-white/[0.03] p-0 text-white/55 hover:border-[rgba(var(--accent-rgb),0.35)] hover:bg-[rgba(var(--accent-rgb),0.08)] hover:text-[var(--accent)]"
+>
+  <Weight className="h-4 w-4" />
+</Button>
 
                           <Button
                             variant="ghost"
@@ -1121,6 +1207,165 @@ export default function FilamentsPage() {
         </form>
       </Modal>
 
+      
+{/* =========================================================
+    MODAL EDITAR ESTOQUE EM GRAMAS
+========================================================== */}
+<Modal
+  isOpen={editStockModalOpen}
+  onClose={() => {
+    if (!editStockSaving) {
+      setEditStockModalOpen(false);
+    }
+  }}
+  title="Editar estoque"
+  size="md"
+>
+  <form onSubmit={handleEditStock} className="space-y-5">
+    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+      <p className="text-xs uppercase tracking-wider text-white/35">
+        Filamento selecionado
+      </p>
+
+      <div className="mt-2 flex items-center gap-3">
+        <div
+          className="h-10 w-10 rounded-xl border border-white/10"
+          style={{
+            backgroundColor:
+              editStockFilament?.colorHex ?? "#000000",
+          }}
+        />
+
+        <div>
+          <p className="text-sm font-semibold text-white">
+            {editStockFilament?.name ?? "Filamento"}
+          </p>
+
+          <p className="mt-1 text-xs text-white/40">
+            Peso por rolo: {editStockFilament?.weight ?? 0} g
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <label
+        htmlFor="editStockWeight"
+        className="mb-2 block text-sm font-medium text-white/70"
+      >
+        Estoque disponível (gramas)
+      </label>
+
+      <input
+        id="editStockWeight"
+        type="number"
+        min="0"
+        max={
+          editStockFilament
+            ? editStockFilament.weight *
+              editStockFilament.quantity
+            : undefined
+        }
+        step="1"
+        value={editStockWeight}
+        onChange={(e) => setEditStockWeight(e.target.value)}
+        required
+        className="h-12 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 text-white outline-none transition focus:border-[rgba(var(--accent-rgb),0.45)] focus:ring-2 focus:ring-[rgba(var(--accent-rgb),0.08)]"
+      />
+
+      <p className="mt-2 text-xs leading-relaxed text-white/35">
+        Informe o peso total que você tem disponível atualmente,
+        considerando todos os rolos desse cadastro.
+      </p>
+    </div>
+
+    {editStockFilament && editStockWeight.trim() !== "" &&
+      Number.isFinite(Number(editStockWeight)) &&
+      Number(editStockWeight) >= 0 && (
+        <div className="rounded-xl border border-[rgba(var(--accent-rgb),0.2)] bg-[rgba(var(--accent-rgb),0.05)] p-4">
+          <p className="text-xs text-white/45">
+            Prévia do ajuste
+          </p>
+
+          <div className="mt-2 flex items-center justify-between gap-3">
+            <span className="text-sm text-white/55">
+              Estoque atual
+            </span>
+
+            <span className="text-sm text-white/75">
+              {stockOf(editStockFilament).toLocaleString("pt-BR")} g
+            </span>
+          </div>
+
+          <div className="mt-2 flex items-center justify-between gap-3">
+            <span className="text-sm text-white/55">
+              Novo estoque
+            </span>
+
+            <span className="text-sm font-semibold text-white">
+              {Number(editStockWeight).toLocaleString("pt-BR")} g
+            </span>
+          </div>
+
+          <div className="mt-3 border-t border-white/[0.08] pt-3">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm text-white/55">
+                Diferença
+              </span>
+
+              <span className={`text-sm font-semibold ${
+                Number(editStockWeight) -
+                  stockOf(editStockFilament) < 0
+                  ? "text-amber-400"
+                  : Number(editStockWeight) -
+                      stockOf(editStockFilament) > 0
+                    ? "text-emerald-400"
+                    : "text-white/50"
+              }`}>
+                {Number(editStockWeight) -
+                  stockOf(editStockFilament) > 0
+                  ? "+"
+                  : ""}
+                {(
+                  Number(editStockWeight) -
+                  stockOf(editStockFilament)
+                ).toLocaleString("pt-BR")} g
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+    {editStockError && (
+      <p className="rounded-lg border border-red-500/20 bg-red-500/[0.06] px-3 py-2 text-sm text-red-300">
+        {editStockError}
+      </p>
+    )}
+
+    <div className="flex flex-col-reverse gap-3 border-t border-white/[0.06] pt-5 sm:flex-row sm:justify-end">
+      <Button
+        type="button"
+        variant="secondary"
+        onClick={() => setEditStockModalOpen(false)}
+        disabled={editStockSaving}
+        className="border border-white/10 bg-white/[0.04] text-white/65"
+      >
+        Cancelar
+      </Button>
+
+      <Button
+        type="submit"
+        disabled={editStockSaving || !editStockFilament}
+        className="bg-gradient-to-r from-[#071124] to-[#0d1a35] text-white ring-1 ring-white/10 hover:ring-[rgba(var(--accent-rgb),0.35)]"
+      >
+        <Weight className="mr-2 h-4 w-4" />
+        {editStockSaving ? "Salvando..." : "Salvar estoque"}
+      </Button>
+    </div>
+  </form>
+</Modal>
+
+
       {/* =========================================================
           MODAL NOVO / EDITAR FILAMENTO
       ========================================================== */}
@@ -1325,34 +1570,60 @@ export default function FilamentsPage() {
                   focus:ring-[rgba(var(--accent-rgb),0.15)]
                 "
               />
+
+              
             </div>
 
-            <div className="mt-4">
-              <Input
-                id="costPerKg"
-                label="Custo por Kg (R$)"
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="Ex.: 129,90"
-                value={form.costPerKg}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    costPerKg: e.target.value,
-                  })
-                }
-                required
-                className="
-                  border-white/10
-                  bg-white/[0.04]
-                  text-white
-                  placeholder:text-white/25
-                  focus:border-[rgba(var(--accent-rgb),0.45)]
-                  focus:ring-[rgba(var(--accent-rgb),0.15)]
-                "
-              />
-            </div>
+            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+  <Input
+    id="costPerKg"
+    label="Custo por Kg (R$)"
+    type="number"
+    step="0.01"
+    min="0"
+    placeholder="Ex.: 129,90"
+    value={form.costPerKg}
+    onChange={(e) =>
+      setForm({
+        ...form,
+        costPerKg: e.target.value,
+      })
+    }
+    required
+    className="
+      border-white/10
+      bg-white/[0.04]
+      text-white
+      placeholder:text-white/25
+      focus:border-[rgba(var(--accent-rgb),0.45)]
+      focus:ring-[rgba(var(--accent-rgb),0.15)]
+    "
+  />
+
+  <Input
+  id="remainingWeight"
+  label="Estoque disponível (g)"
+  type="number"
+  step="0.01"
+  min="0"
+  placeholder="Ex.: 750"
+  value={form.remainingWeight}
+  onChange={(e) =>
+    setForm({
+      ...form,
+      remainingWeight: e.target.value,
+    })
+  }
+  className="
+    border-white/10
+    bg-white/[0.04]
+    text-white
+    placeholder:text-white/25
+    focus:border-[rgba(var(--accent-rgb),0.45)]
+    focus:ring-[rgba(var(--accent-rgb),0.15)]
+  "
+/>
+</div>
           </div>
 
           {/* INFORMAÇÕES DA COMPRA */}

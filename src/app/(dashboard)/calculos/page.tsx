@@ -11,6 +11,8 @@ import {
   Settings2,
   Coins,
   Weight,
+  Ruler,
+  Copy,
 } from "lucide-react";
 import { useFilaments } from "@/hooks/useFilaments";
 import { usePrinters } from "@/hooks/usePrinters";
@@ -85,6 +87,47 @@ export default function CalculosPage() {
   const [marginPercent, setMarginPercent] = useState(30);
   const [markupMultiplier, setMarkupMultiplier] = useState(3);
   const [advanced, setAdvanced] = useState(false);
+
+  // Calculadora de escala 3D
+const [scaleCurrent, setScaleCurrent] = useState(100);
+const [scaleDesired, setScaleDesired] = useState(150);
+
+const [dimensions, setDimensions] = useState({
+  currentX: 100,
+  currentY: 100,
+  currentZ: 100,
+  desiredX: 100,
+  desiredY: 100,
+  desiredZ: 100,
+});
+
+const calculateScale = (current: number, desired: number) =>
+  current > 0 ? (desired / current) * 100 : null;
+
+const uniformScale = calculateScale(scaleCurrent, scaleDesired);
+
+const axisScales = {
+  x: calculateScale(dimensions.currentX, dimensions.desiredX),
+  y: calculateScale(dimensions.currentY, dimensions.desiredY),
+  z: calculateScale(dimensions.currentZ, dimensions.desiredZ),
+};
+
+const updateDimension = (
+  field: keyof typeof dimensions,
+  value: number,
+) => {
+  setDimensions((previous) => ({
+    ...previous,
+    [field]: value,
+  }));
+};
+
+const formatScale = (value: number | null) =>
+  value === null
+    ? "Inválido"
+    : `${value.toLocaleString("pt-BR", {
+        maximumFractionDigits: 2,
+      })}%`;
 
   const totalMinutes = hours * 60 + minutes;
   const totalHours = totalMinutes / 60;
@@ -289,15 +332,7 @@ export default function CalculosPage() {
                 </div>
               </div>
 
-              <div className="mt-5 flex items-start gap-2 rounded-xl border border-white/[0.06] bg-white/[0.025] p-3.5 text-xs leading-relaxed text-white/40">
-                <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-[#FD6401]/80" />
-                <p>
-                  O cálculo considera R$ 0,17/h de energia e R$ 0,32/h de
-                  trabalho e desgaste da impressora, totalizando R$ 0,49/h.
-                  O valor cadastrado em Impressoras não é somado novamente.
-                </p>
               </div>
-            </div>
 
             <div className="rounded-2xl border border-white/10 bg-[#0A1120]/85 p-5 shadow-xl shadow-black/20 sm:p-6">
               <button
@@ -560,22 +595,250 @@ export default function CalculosPage() {
                   </span>
                 </div>
               </div>
-
-              <p className="mt-3 text-[10px] leading-relaxed text-white/30">
-                O preço de venda é o custo total multiplicado pelo fator
-                comercial selecionado. O lucro desconta as taxas e os impostos
-                informados.
-              </p>
             </div>
           </aside>
         </div>
 
-        <p className="flex items-center justify-center gap-2 pb-3 text-center text-[11px] text-white/25">
-          <Weight className="h-3.5 w-3.5" />
-          Custo fixo da impressora: R$ 0,49 por hora, mais filamento e demais
-          custos informados.
-        </p>
-      </div>
+        {/* CALCULADORA DE ESCALA 3D */}
+        <section className="space-y-5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#FD6401]/20 bg-[#FD6401]/10">
+              <Ruler className="h-5 w-5 text-[#FD6401]" />
+            </div>
+
+            <div>
+              <h2 className="text-lg font-semibold">
+                Calculadora de Escala 3D
+              </h2>
+              <p className="mt-1 text-xs text-white/40">
+                Redimensione suas peças antes de fatiar.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid items-start gap-5 lg:grid-cols-2">
+            {/* ESCALA UNIFORME */}
+            <div className="rounded-2xl border border-white/10 bg-[#0A1120]/90 p-5 shadow-xl shadow-black/20 sm:p-6">
+              <div className="mb-5">
+                <h3 className="text-sm font-semibold">
+                  Escala proporcional
+                </h3>
+                <p className="mt-1 text-xs leading-relaxed text-white/40">
+                  Informe uma dimensão atual e a desejada. Use o resultado
+                  com a escala uniforme ativada no fatiador.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <Field
+                  label="Medida atual da peça"
+                  value={scaleCurrent}
+                  onChange={setScaleCurrent}
+                  suffix="mm"
+                  step="0.01"
+                />
+
+                <Field
+                  label="Medida desejada"
+                  value={scaleDesired}
+                  onChange={setScaleDesired}
+                  suffix="mm"
+                  step="0.01"
+                />
+              </div>
+
+              <div className="mt-5 rounded-xl border border-[#FD6401]/20 bg-[#FD6401]/[0.06] p-4">
+                <p className="text-xs text-white/45">
+                  Percentual de escala
+                </p>
+
+                <p className="mt-1 text-3xl font-semibold tracking-tight text-[#FD6401]">
+                  {formatScale(uniformScale)}
+                </p>
+
+                <div className="mt-3 flex items-center justify-between border-t border-white/[0.07] pt-3 text-xs">
+                  <span className="text-white/45">
+                    Variação de tamanho
+                  </span>
+
+                  <span className="font-medium text-white/80">
+                    {uniformScale === null
+                      ? "Indisponível"
+                      : `${uniformScale > 100 ? "+" : ""}${(
+                          uniformScale - 100
+                        ).toLocaleString("pt-BR", {
+                          maximumFractionDigits: 2,
+                        })}%`}
+                  </span>
+                </div>
+
+                <div className="mt-3 flex items-center justify-between text-xs">
+                  <span className="text-white/45">
+                    Dimensão final
+                  </span>
+                  <span className="font-medium text-white">
+                    {scaleDesired.toLocaleString("pt-BR", {
+                      maximumFractionDigits: 2,
+                    })}{" "}
+                    mm
+                  </span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                disabled={uniformScale === null}
+                onClick={() =>
+                  void navigator.clipboard.writeText(
+                    String(
+                      Number(uniformScale!.toFixed(2)),
+                    ),
+                  )
+                }
+                className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-xs font-medium text-white/70 transition hover:border-[#FD6401]/40 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <Copy className="h-3.5 w-3.5" />
+                Copiar percentual
+              </button>
+            </div>
+
+            {/* ESCALA POR EIXO */}
+            <div className="rounded-2xl border border-white/10 bg-[#0A1120]/90 p-5 shadow-xl shadow-black/20 sm:p-6">
+              <div className="mb-5">
+                <h3 className="text-sm font-semibold">
+                  Escala por eixo
+                </h3>
+                <p className="mt-1 text-xs leading-relaxed text-white/40">
+                  Ajuste largura (X), profundidade (Y) e altura (Z)
+                  independentemente.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                {(
+                  [
+                    {
+                      axis: "X",
+                      current: "currentX",
+                      desired: "desiredX",
+                      result: axisScales.x,
+                    },
+                    {
+                      axis: "Y",
+                      current: "currentY",
+                      desired: "desiredY",
+                      result: axisScales.y,
+                    },
+                    {
+                      axis: "Z",
+                      current: "currentZ",
+                      desired: "desiredZ",
+                      result: axisScales.z,
+                    },
+                  ] as const
+                ).map((item) => (
+                  <div
+                    key={item.axis}
+                    className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-3"
+                  >
+                    <div className="mb-3 flex items-center justify-between">
+                      <span className="text-xs font-semibold text-white/80">
+                        Eixo {item.axis}
+                      </span>
+
+                      <span className="text-xs font-semibold text-[#FD6401]">
+                        {formatScale(item.result)}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <Field
+                        label="Medida atual"
+                        value={dimensions[item.current]}
+                        onChange={(value) =>
+                          updateDimension(item.current, value)
+                        }
+                        suffix="mm"
+                        step="0.01"
+                      />
+
+                      <Field
+                        label="Medida desejada"
+                        value={dimensions[item.desired]}
+                        onChange={(value) =>
+                          updateDimension(item.desired, value)
+                        }
+                        suffix="mm"
+                        step="0.01"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-4 rounded-xl border border-white/[0.07] bg-white/[0.025] p-3">
+                <p className="text-xs font-medium text-white/65">
+                  Resumo para o fatiador
+                </p>
+
+                <div className="mt-3 grid grid-cols-3 gap-2">
+                  {(
+                    [
+                      ["X", axisScales.x],
+                      ["Y", axisScales.y],
+                      ["Z", axisScales.z],
+                    ] as const
+                  ).map(([axis, value]) => (
+                    <div
+                      key={axis}
+                      className="rounded-lg bg-white/[0.035] p-2 text-center"
+                    >
+                      <p className="text-[10px] text-white/35">
+                        Eixo {axis}
+                      </p>
+                      <p className="mt-1 text-sm font-semibold text-white">
+                        {formatScale(value)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                disabled={Object.values(axisScales).some(
+                  (value) => value === null,
+                )}
+                onClick={() =>
+                  void navigator.clipboard.writeText(
+                    `X: ${Number(axisScales.x!.toFixed(2))}% | Y: ${Number(
+                      axisScales.y!.toFixed(2),
+                    )}% | Z: ${Number(axisScales.z!.toFixed(2))}%`,
+                  )
+                }
+                className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-xs font-medium text-white/70 transition hover:border-[#FD6401]/40 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <Copy className="h-3.5 w-3.5" />
+                Copiar escalas X, Y e Z
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-2 rounded-xl border border-white/[0.06] bg-white/[0.025] p-3.5 text-xs leading-relaxed text-white/40">
+            <Ruler className="mt-0.5 h-4 w-4 shrink-0 text-[#FD6401]/80" />
+            <p>
+              <strong className="text-white/65">
+                Dica:
+              </strong>{" "}
+              a escala uniforme preserva as proporções da peça. A escala por
+              eixo pode deformar o modelo de propósito. Se a medida atual for
+              zero, não é possível calcular o percentual desse eixo. Confira
+              as dimensões no fatiador antes de imprimir.
+            </p>
+          </div>
+        </section>
+
+        </div>
     </main>
   );
 }
