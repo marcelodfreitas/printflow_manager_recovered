@@ -939,19 +939,25 @@ export default function OrdersPage() {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <Select
-                id="client"
-                label="Cliente"
-                options={clients.map((client) => ({
-                  value: client.id,
-                  label: client.name,
-                }))}
-                value={form.clientId}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, clientId: e.target.value }))
-                }
-                required
-                className="border-white/10 bg-white/[0.04] text-white"
-              />
+  id="client"
+  label="Cliente"
+  options={[...clients]
+    .sort((a, b) =>
+      a.name.localeCompare(b.name, "pt-BR", {
+        sensitivity: "base",
+      })
+    )
+    .map((client) => ({
+      value: client.id,
+      label: client.name,
+    }))}
+  value={form.clientId}
+  onChange={(e) =>
+    setForm((prev) => ({ ...prev, clientId: e.target.value }))
+  }
+  required
+  className="border-white/10 bg-white/[0.04] text-white"
+/>
               <Select
                 id="status"
                 label="Status"

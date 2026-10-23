@@ -61,7 +61,9 @@ export default function ClientPage() {
       client.address.toLowerCase().includes(term) ||
       (client.cep ?? "").toLowerCase().includes(term)
     );
-  });
+  }).sort((a, b) =>
+    a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" })
+  );
 
   function formatCep(value: string) {
     const numbers = value.replace(/\D/g, "").slice(0, 8);

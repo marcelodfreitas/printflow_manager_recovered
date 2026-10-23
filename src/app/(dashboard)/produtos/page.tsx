@@ -107,11 +107,17 @@ const productionCost =
   { key: "laborCost", label: "Custo de mão de obra" },
   { key: "packagingCost", label: "Custo da embalagem" },
 ] as const;
-  const filtered = products.filter(
-    (product) =>
-      product.name.toLowerCase().includes(search.toLowerCase()) ||
-      (product.description ?? "").toLowerCase().includes(search.toLowerCase()),
-  );
+  const filtered = products
+    .filter(
+      (product) =>
+        product.name.toLowerCase().includes(search.toLowerCase()) ||
+        (product.description ?? "").toLowerCase().includes(search.toLowerCase()),
+    )
+    .sort((a, b) =>
+      a.name.localeCompare(b.name, "pt-BR", {
+        sensitivity: "base",
+      }),
+    );
   function resetImageState() {
     if (imagePreview.startsWith("blob:")) {
       URL.revokeObjectURL(imagePreview);

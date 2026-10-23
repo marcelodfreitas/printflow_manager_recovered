@@ -19,6 +19,7 @@ import { Card, CardContent, CardHeader } from "@/components/common";
 import { useOrders } from "@/hooks/useOrders";
 import type { OrderItem, OrderWithItems } from "@/types";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
 
 const statusLabels: Record<string, string> = {
   pending: "Pendente",
@@ -128,6 +129,117 @@ export default function OrderDetailsPage() {
   const orderNumber = order.orderNumber ?? order.id.slice(0, 8).toUpperCase();
   const statusClass = statusStyles[order.status] ?? "border-white/10 bg-white/5 text-white/60";
 
+  // Gera o documento comercial em uma janela isolada para não depender do CSS
+  // de impressão da ficha interna, que pode ocultar o conteúdo do pedido.
+  const handleClientPrint = async () => {
+    // Abre a janela imediatamente para evitar que o navegador bloqueie o pop-up.
+    const printWindow = window.open("", "_blank", "width=900,height=700");
+    if (!printWindow) {
+      window.alert("O navegador bloqueou a janela do pedido. Permita pop-ups para este site e tente novamente.");
+      return;
+    }
+    printWindow.document.write("<p style='font-family:Arial;padding:24px'>Carregando os dados da empresa...</p>");
+
+    // Busca a identidade visual cadastrada pelo usuário autenticado.
+    let companyLogoUrl = "";
+    let companyName = "";
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile, error } = await supabase
+          .from("profiles")
+          .select("company_logo_url, company_name")
+          .eq("id", user.id)
+          .maybeSingle();
+        if (error) throw error;
+        companyLogoUrl = profile?.company_logo_url?.trim() || "";
+        companyName = profile?.company_name?.trim() || "";
+      }
+    } catch (error) {
+      console.error("Não foi possível carregar o nome e a logo da empresa:", error);
+    }
+
+    const escapeHtml = (value: unknown) => String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+
+    const paymentMethod = (order as OrderWithItems & { paymentMethod?: string; payment_method?: string }).paymentMethod
+      || (order as OrderWithItems & { payment_method?: string }).payment_method
+      || "Chave Pix: 65035705000190";
+
+    const rows = items.length > 0
+      ? items.map((item) => {
+          const quantity = Math.max(0, asNumber(item.quantity));
+          const unitPrice = quantity > 0 ? asNumber(item.price) : 0;
+          const subtotal = unitPrice * quantity;
+          return `<tr>
+            <td><strong>${escapeHtml(item.productName || "Produto personalizado")}</strong>${item.filamentColor ? `<small>Cor: ${escapeHtml(item.filamentName)}</small>` : ""}</td>
+            <td class="numeric">${quantity}</td>
+            <td class="numeric">${escapeHtml(formatCurrency(unitPrice))}</td>
+            <td class="numeric">${escapeHtml(formatCurrency(subtotal))}</td>
+          </tr>`;
+        }).join("")
+      : `<tr><td><strong>${escapeHtml(order.productName || "Produto personalizado")}</strong></td><td class="numeric">${totalQuantity}</td><td class="numeric">${escapeHtml(formatCurrency(totalQuantity > 0 ? orderRevenue / totalQuantity : orderRevenue))}</td><td class="numeric">${escapeHtml(formatCurrency(orderRevenue))}</td></tr>`;
+
+    const notes = order.notes?.trim()
+      ? `<section class="section"><h2>Observações</h2><p class="notes">${escapeHtml(order.notes.trim()).replace(/\n/g, "<br>")}</p></section>`
+      : "";
+
+    printWindow.document.open();
+    printWindow.document.write(`<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><base href="${window.location.origin}/">
+<title>Pedido #${escapeHtml(orderNumber)}</title>
+<style>
+  @page { size: A4; margin: 14mm; }
+  * { box-sizing: border-box; }
+  body { margin: 0; color: #0f172a; background: #fff; font: 12px Arial, Helvetica, sans-serif; }
+  header { display:flex; align-items:center; justify-content:space-between; gap:20px; padding-bottom:18px; border-bottom:3px solid #fd6401; }
+  .brand { display:flex; align-items:center; gap:14px; min-width:0; }
+  .logo { width:64px; height:64px; object-fit:contain; }
+  .brand h1 { margin:0; color:#071124; font-size:20px; }
+  .brand p { margin:5px 0 0; color:#64748b; font-size:10px; }
+  .quote { text-align:right; flex-shrink:0; }
+  .quote span, .total span { display:block; color:#9a3d00; font-size:9px; font-weight:800; letter-spacing:1.5px; }
+  .quote strong { display:block; margin-top:5px; font-size:15px; }
+  .section { margin-top:24px; }
+  h2 { margin:0 0 12px; font-size:13px; }
+  .client-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px 22px; }
+  .field span { display:block; margin-bottom:5px; color:#64748b; font-size:10px; }
+  .field strong { font-size:12px; font-weight:600; }
+  table { width:100%; border-collapse:collapse; font-size:11px; }
+  th { padding:10px 8px; background:#f1f5f9; color:#334155; text-align:left; }
+  td { padding:12px 8px; border-bottom:1px solid #e2e8f0; vertical-align:top; }
+  td strong, td small { display:block; }
+  td small { margin-top:4px; color:#64748b; font-size:10px; }
+  .numeric { text-align:right; white-space:nowrap; }
+  .total-row { display:flex; justify-content:space-between; align-items:flex-start; gap:20px; margin-top:24px; padding-top:16px; border-top:1px solid #e2e8f0; }
+  .total { min-width:180px; padding:14px 16px; background:#fff2e9; text-align:right; }
+  .total strong { display:block; margin-top:6px; color:#9a3d00; font-size:23px; }
+  .notes { margin:0; color:#475569; line-height:1.6; overflow-wrap:anywhere; }
+  footer { margin-top:44px; padding-top:14px; border-top:1px solid #e2e8f0; text-align:center; }
+  footer strong { font-size:12px; } footer p { margin:5px 0 0; color:#64748b; font-size:10px; }
+  @media screen { body { max-width:780px; margin:24px auto; padding:24px; box-shadow:0 2px 18px #0001; } }
+  @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } tr { break-inside:avoid; } }
+</style></head><body>
+<header><div class="brand">${companyLogoUrl ? `<img class="logo" src="${escapeHtml(companyLogoUrl)}" alt="Logo da empresa" onerror="this.style.display='none'">` : ""}<div><h1>${escapeHtml(companyName || "Empresa")}</h1><p>Pedido de impressão 3D</p></div></div><div class="quote"><span>PEDIDO</span><strong>#${escapeHtml(orderNumber)}</strong></div></header>
+<section class="section"><h2>Dados do cliente</h2><div class="client-grid">
+<div class="field"><span>Cliente</span><strong>${escapeHtml(order.clientName || "Cliente não informado")}</strong></div>
+<div class="field"><span>Data de emissão</span><strong>${escapeHtml(formatDate(new Date().toISOString()))}</strong></div>
+<div class="field"><span>Prazo de entrega</span><strong>${escapeHtml(order.deadline ? formatDate(order.deadline) : "A combinar")}</strong></div>
+<div class="field"><span>Forma de pagamento</span><strong>A Combinar</strong></div>
+</div></section>
+<section class="section"><h2>Itens do pedido</h2><table><thead><tr><th>Descrição</th><th class="numeric">Qtd.</th><th class="numeric">Valor unitário</th><th class="numeric">Subtotal</th></tr></thead><tbody>${rows}</tbody></table></section>
+<section class="total-row"><div class="field"><span>Condição de pagamento</span><strong>${escapeHtml(paymentMethod)}</strong></div><div class="total"><span>VALOR TOTAL</span><strong>${escapeHtml(formatCurrency(orderRevenue))}</strong></div></section>
+${notes}<footer><strong>Obrigado pela preferência!</strong><p>Em caso de dúvidas sobre este pedido, entre em contato conosco.</p></footer>
+<script>window.addEventListener('load', function(){ window.focus(); window.print(); });<\/script>
+</body></html>`);
+    printWindow.document.close();
+  };
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#050914] text-white">
       <div className="pointer-events-none absolute -right-32 top-0 h-80 w-80 rounded-full bg-[rgba(var(--accent-rgb),0.07)] blur-3xl no-print" />
@@ -146,9 +258,14 @@ export default function OrderDetailsPage() {
             </div>
             <p className="mt-1 text-sm text-white/40">Detalhes, acompanhamento e ficha interna de produção.</p>
           </div>
-          <Button onClick={handlePrint} className="shrink-0">
-            <FileDown className="mr-2 h-4 w-4" /> Gerar PDF A4
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={handlePrint} className="shrink-0">
+              <FileDown className="mr-2 h-4 w-4" /> Gerar PDF Produção
+            </Button>
+            <Button onClick={handleClientPrint} className="shrink-0">
+              <FileDown className="mr-2 h-4 w-4" /> Gerar PDF Cliente
+            </Button>
+          </div>
         </div>
 
         <div className="print-heading hidden">
@@ -308,11 +425,91 @@ export default function OrderDetailsPage() {
         <div className="flex justify-end gap-3 no-print">
           <Link href="/pedidos"><Button variant="ghost"><ArrowLeft className="mr-2 h-4 w-4" /> Voltar</Button></Link>
           <Button onClick={handlePrint}><FileDown className="mr-2 h-4 w-4" /> Gerar PDF A4</Button>
+          <Button onClick={handleClientPrint}><FileDown className="mr-2 h-4 w-4" /> Gerar PDF Cliente</Button>
         </div>
       </div>
 
+      {/*
+        Documento comercial separado da ficha de produção.
+        Ajuste /logo.png para o caminho real do logotipo dentro da pasta public.
+      */}
+      <section className="client-pdf hidden">
+        <header className="client-pdf-header">
+          <div className="client-brand">
+            <img src="/logo.png" alt="Logo da empresa" className="client-logo" />
+            <div>
+              <h1>PrintFlow Manager</h1>
+              <p>Impressão 3D • Transformando ideias em realidade</p>
+            </div>
+          </div>
+          <div className="client-quote-number">
+            <span>PEDIDO</span>
+            <strong>#{orderNumber}</strong>
+          </div>
+        </header>
+
+        <section className="client-section">
+          <h2>Dados do cliente</h2>
+          <div className="client-data-grid">
+            <p><span>Cliente</span><strong>{order.clientName || "Cliente não informado"}</strong></p>
+            <p><span>Data de emissão</span><strong>{formatDate(new Date().toISOString())}</strong></p>
+            <p><span>Prazo de entrega</span><strong>{order.deadline ? formatDate(order.deadline) : "A combinar"}</strong></p>
+          </div>
+        </section>
+
+        <section className="client-section">
+          <h2>Itens do pedido</h2>
+          <table className="client-items-table">
+            <thead><tr><th>Descrição</th><th>Qtd.</th><th>Valor unitário</th><th>Subtotal</th></tr></thead>
+            <tbody>
+              {items.length > 0 ? items.map((item, index) => {
+                const quantity = Math.max(0, asNumber(item.quantity));
+                const subtotal = asNumber(item.price) * quantity;
+                return (
+                  <tr key={item.id ?? `${item.productName}-${index}`}>
+                    <td>
+                      <strong>{item.productName || "Produto personalizado"}</strong>
+                      {item.filamentColor ? <small>Cor: {item.filamentName}</small> : null}
+                    </td>
+                    <td>{quantity}</td>
+                    <td>{formatCurrency(quantity > 0 ? asNumber(item.price) : 0)}</td>
+                    <td>{formatCurrency(subtotal)}</td>
+                  </tr>
+                );
+              }) : (
+                <tr><td><strong>{order.productName || "Produto personalizado"}</strong></td><td>{totalQuantity}</td><td>{formatCurrency(totalQuantity > 0 ? orderRevenue / totalQuantity : orderRevenue)}</td><td>{formatCurrency(orderRevenue)}</td></tr>
+              )}
+            </tbody>
+          </table>
+        </section>
+
+        <section className="client-total-row">
+          <div>
+            <span>Forma de pagamento</span>
+            <strong>{((order as OrderWithItems & { paymentMethod?: string; payment_method?: string }).paymentMethod || (order as OrderWithItems & { payment_method?: string }).payment_method || "A combinar")}</strong>
+          </div>
+          <div className="client-total">
+            <span>VALOR TOTAL</span>
+            <strong>{formatCurrency(orderRevenue)}</strong>
+          </div>
+        </section>
+
+        {order.notes?.trim() ? (
+          <section className="client-section client-notes">
+            <h2>Observações</h2>
+            <p>{order.notes.trim()}</p>
+          </section>
+        ) : null}
+
+        <footer className="client-pdf-footer">
+          <strong>Obrigado pela preferência!</strong>
+          <p>Em caso de dúvidas sobre este pedsido, entre em contato conosco.</p>
+        </footer>
+      </section>
+
       <style jsx global>{`
         @page { size: A4; margin: 12mm; }
+        .client-pdf { display: none; }
         @media print {
           html, body { background: #fff !important; color: #0f172a !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
           body * { visibility: hidden !important; }
@@ -340,6 +537,52 @@ export default function OrderDetailsPage() {
           .print-summary .text-\\[var\\(--accent\\)\\] { color: #c94f00 !important; }
           .print-card aside, aside { break-inside: avoid; }
           .rounded-full { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+
+          /* Modo cliente: oculta a tela do pedido e imprime somente o documento comercial. */
+          html[data-print-mode="client"] body { background: #fff !important; }
+          html[data-print-mode="client"] body * { visibility: hidden !important; }
+          html[data-print-mode="client"] .relative.min-h-screen { 
+            position: static !important; inset: auto !important; width: 100% !important;
+            min-height: 0 !important; overflow: visible !important; background: #fff !important;
+          }
+          html[data-print-mode="client"] .relative.min-h-screen > .relative { display: none !important; }
+          html[data-print-mode="client"] .relative.min-h-screen > .client-pdf {
+            display: block !important; visibility: visible !important; position: relative !important;
+            width: 100% !important; height: auto !important; overflow: visible !important;
+            color: #0f172a !important; background: #fff !important;
+            font-family: Arial, Helvetica, sans-serif !important; font-size: 11px !important;
+          }
+          html[data-print-mode="client"] .relative.min-h-screen > .client-pdf,
+          html[data-print-mode="client"] .relative.min-h-screen > .client-pdf * {
+            visibility: visible !important;
+          }
+          .client-pdf-header { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding-bottom: 18px; border-bottom: 3px solid #fd6401; }
+          .client-brand { display: flex; align-items: center; gap: 14px; }
+          .client-logo { width: 64px; height: 64px; object-fit: contain; }
+          .client-brand h1 { margin: 0; font-size: 20px; font-weight: 800; color: #071124 !important; }
+          .client-brand p { margin: 5px 0 0; color: #64748b !important; font-size: 9px; }
+          .client-quote-number { text-align: right; }
+          .client-quote-number span, .client-total span { display: block; color: #9a3d00 !important; font-size: 9px; font-weight: 800; letter-spacing: 1.5px; }
+          .client-quote-number strong { display: block; margin-top: 5px; color: #071124 !important; font-size: 14px; }
+          .client-section { margin-top: 22px; }
+          .client-section h2 { margin: 0 0 12px; color: #071124 !important; font-size: 13px; font-weight: 800; }
+          .client-data-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 20px; }
+          .client-data-grid p { margin: 0; }
+          .client-data-grid span, .client-total-row > div > span { display: block; margin-bottom: 5px; color: #64748b !important; font-size: 9px; }
+          .client-data-grid strong, .client-total-row > div > strong { color: #0f172a !important; font-size: 11px; }
+          .client-items-table { width: 100%; border-collapse: collapse; font-size: 10px; }
+          .client-items-table th { padding: 10px 8px; background: #f1f5f9 !important; color: #334155 !important; text-align: left; }
+          .client-items-table td { padding: 12px 8px; border-bottom: 1px solid #e2e8f0; color: #334155 !important; vertical-align: top; }
+          .client-items-table td:nth-child(n+2), .client-items-table th:nth-child(n+2) { text-align: right; }
+          .client-items-table td strong { display: block; color: #0f172a !important; }
+          .client-items-table small { display: block; margin-top: 4px; color: #64748b !important; }
+          .client-total-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; margin-top: 24px; padding-top: 16px; border-top: 1px solid #e2e8f0; }
+          .client-total { min-width: 170px; padding: 14px 16px; border-radius: 8px; background: #fff2e9 !important; text-align: right; }
+          .client-total strong { display: block; margin-top: 6px; color: #9a3d00 !important; font-size: 22px; }
+          .client-notes p { margin: 0; white-space: pre-wrap; color: #475569 !important; line-height: 1.5; }
+          .client-pdf-footer { margin-top: 44px; padding-top: 14px; border-top: 1px solid #e2e8f0; text-align: center; }
+          .client-pdf-footer strong { color: #071124 !important; font-size: 12px; }
+          .client-pdf-footer p { margin-top: 5px; color: #64748b !important; font-size: 9px; }
         }
       `}</style>
     </div>

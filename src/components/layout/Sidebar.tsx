@@ -368,8 +368,12 @@ function LogoutButton({
 }
 
 export function Sidebar() {
-  const [expanded, setExpanded] = useState(false);
-  const { open, setOpen } = useMobileNav();
+  const [pinned, setPinned] = useState(false);
+const [hovered, setHovered] = useState(false);
+
+const expanded = pinned || hovered;
+
+const { open, setOpen } = useMobileNav();
 
   return (
     <>
@@ -377,6 +381,8 @@ export function Sidebar() {
           DESKTOP SIDEBAR
       ========================================================= */}
       <aside
+       onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
         className={cn(
           "relative hidden h-screen shrink-0 flex-col",
           "border-r border-white/10 bg-[#050914]",
@@ -386,9 +392,9 @@ export function Sidebar() {
         )}
       >
         <LogoBlock
-          expanded={expanded}
-          onToggle={() => setExpanded((value) => !value)}
-        />
+  expanded={expanded}
+  onToggle={() => setPinned((value) => !value)}
+/>
 
         <NavSections expanded={expanded} />
 
