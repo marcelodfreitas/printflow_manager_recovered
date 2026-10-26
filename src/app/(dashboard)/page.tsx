@@ -15,6 +15,7 @@ import {
   WalletCards,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -24,6 +25,8 @@ import { useOrders } from "@/hooks/useOrders";
 import { usePrinters } from "@/hooks/usePrinters";
 import { formatCurrency, translateStatus } from "@/lib/utils";
 import { RevenueChart } from "@/components/dashboard/RevenueChart";
+
+import { createClient } from "@/lib/supabase/client";
 
 function formatWeight(grams: number) {
   if (grams >= 1000) {
@@ -79,6 +82,48 @@ function isCompletedOrder(status: string) {
 
 export default function DashboardPage() {
   const router = useRouter();
+
+  const [userName, setUserName] = useState("Usuário");
+
+  useEffect(() => {
+    const supabase = createClient();
+    let isMounted = true;
+
+    async function loadUserName() {
+      try {
+        const {
+          data: { user },
+          error,
+        } = await supabase.auth.getUser();
+
+        if (error) {
+          console.error("Erro ao carregar usuário:", error.message);
+          return;
+        }
+
+        if (!user || !isMounted) return;
+
+        const metadata = user.user_metadata ?? {};
+        const name =
+          metadata.full_name ||
+          metadata.name ||
+          user.email?.split("@")[0] ||
+          "Usuário";
+
+        if (isMounted) {
+          setUserName(String(name));
+        }
+      } catch (error) {
+        console.error("Erro ao buscar dados do usuário:", error);
+      }
+    }
+
+    void loadUserName();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const { clients, loading: loadingClients } = useClients();
   const { printers, loading: loadingPrinters } = usePrinters();
@@ -300,7 +345,7 @@ const revenueData = currentMonthOrders
                   </p>
 
                   <h1 className="mt-2 text-3xl font-bold tracking-tight text-white sm:text-4xl">
-                    Olá, Marcelo!
+                    Olá, {userName}
                   </h1>
 
                   <div className="mt-2 flex items-center gap-2">
