@@ -65,8 +65,63 @@ export default function PrintersPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 p-4 pt-6 sm:p-6 sm:pt-8">
+    <div className="printers-page mx-auto max-w-6xl space-y-6 p-4 pt-6 sm:p-6 sm:pt-8">
+<style jsx global>{`
+  /* Textos */
+  html[data-theme="light"] .printers-page .text-white {
+    color: var(--app-foreground) !important;
+  }
 
+  html[data-theme="light"] .printers-page [class*="text-white/"] {
+    color: var(--muted) !important;
+  }
+
+  /* Cores dos status */
+  html[data-theme="light"] .printers-page .text-green-400 {
+    color: #059669 !important;
+  }
+
+  html[data-theme="light"] .printers-page .text-yellow-400 {
+    color: #b45309 !important;
+  }
+
+  html[data-theme="light"] .printers-page .text-blue-400 {
+    color: #2563eb !important;
+  }
+
+  html[data-theme="light"] .printers-page .text-red-400 {
+    color: #dc2626 !important;
+  }
+
+  /* Cards e superfícies */
+  html[data-theme="light"] .printers-page [class*="bg-white/"] {
+    background-color: var(--surface) !important;
+  }
+
+  /* Bordas e divisores */
+  html[data-theme="light"] .printers-page [class*="border-white/"],
+  html[data-theme="light"] .printers-page [class*="divide-white/"] > * + * {
+    border-color: var(--border) !important;
+  }
+
+  /* Hover das impressoras */
+  html[data-theme="light"] .printers-page [class*="hover:bg-white/"]:hover {
+    background-color: var(--surface-light) !important;
+  }
+
+  /* Botões de ação */
+  html[data-theme="light"] .printers-page button.text-white\\/40 {
+    color: var(--muted) !important;
+  }
+
+  html[data-theme="light"] .printers-page button.hover\\:text-white:hover {
+    color: var(--app-foreground) !important;
+  }
+
+  html[data-theme="light"] .printers-page button.hover\\:text-red-400:hover {
+    color: #dc2626 !important;
+  }
+`}</style>
       {/* HEADER */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -79,7 +134,7 @@ export default function PrintersPage() {
           </p>
         </div>
 
-        <Button
+        {/* <Button
           onClick={handleAdd}
           className="
             inline-flex
@@ -102,7 +157,7 @@ export default function PrintersPage() {
         >
           <Plus className="h-4 w-4" />
           Adicionar impressora
-        </Button>
+        </Button> */}
       </div>
 
       {/* LOADING */}

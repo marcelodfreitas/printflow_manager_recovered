@@ -100,11 +100,7 @@ export default function PerdasPage() {
   const { filaments } = useFilaments();
   const { printers } = usePrinters();
 
-  const {
-    losses,
-    loading,
-    create: createLoss,
-  } = useLosses();
+  const { losses, loading, create: createLoss } = useLosses();
 
   const [search, setSearch] = useState("");
   const [reasonFilter, setReasonFilter] = useState("Todos");
@@ -124,13 +120,9 @@ export default function PerdasPage() {
 
   const lossesWithDetails = useMemo(() => {
     return losses.map((loss) => {
-      const printer = printers.find(
-        (item) => item.id === loss.printerId
-      );
+      const printer = printers.find((item) => item.id === loss.printerId);
 
-      const filament = filaments.find(
-        (item) => item.id === loss.filamentId
-      );
+      const filament = filaments.find((item) => item.id === loss.filamentId);
 
       return {
         ...loss,
@@ -148,8 +140,7 @@ export default function PerdasPage() {
     return lossesWithDetails.filter((loss) => {
       const lossDate = new Date(loss.createdAt);
 
-      const matchesPeriod =
-        !periodStart || lossDate >= periodStart;
+      const matchesPeriod = !periodStart || lossDate >= periodStart;
 
       const matchesSearch =
         !term ||
@@ -168,22 +159,22 @@ export default function PerdasPage() {
   const metrics = useMemo(() => {
     const material = filteredLosses.reduce(
       (total, loss) => total + Number(loss.grams || 0),
-      0
+      0,
     );
 
     const time = filteredLosses.reduce(
       (total, loss) => total + Number(loss.timeMinutes || 0),
-      0
+      0,
     );
 
     const materialCost = filteredLosses.reduce(
       (total, loss) => total + Number(loss.materialCost || 0),
-      0
+      0,
     );
 
     const machineCost = filteredLosses.reduce(
       (total, loss) => total + Number(loss.machineCost || 0),
-      0
+      0,
     );
 
     return {
@@ -198,10 +189,8 @@ export default function PerdasPage() {
   const reasonStats = useMemo(() => {
     const total = filteredLosses.reduce(
       (sum, loss) =>
-        sum +
-        Number(loss.materialCost || 0) +
-        Number(loss.machineCost || 0),
-      0
+        sum + Number(loss.materialCost || 0) + Number(loss.machineCost || 0),
+      0,
     );
 
     return LOSS_REASONS.map((reason) => {
@@ -212,7 +201,7 @@ export default function PerdasPage() {
             sum +
             Number(loss.materialCost || 0) +
             Number(loss.machineCost || 0),
-          0
+          0,
         );
 
       return {
@@ -226,27 +215,24 @@ export default function PerdasPage() {
   }, [filteredLosses]);
 
   const selectedFilament = filaments.find(
-    (filament) => filament.id === form.filamentId
+    (filament) => filament.id === form.filamentId,
   );
 
   const selectedPrinter = printers.find(
-    (printer) => printer.id === form.printerId
+    (printer) => printer.id === form.printerId,
   );
 
   const previewMaterialCost = selectedFilament
-    ? (Number(form.grams || 0) / 1000) *
-      selectedFilament.costPerKg
+    ? (Number(form.grams || 0) / 1000) * selectedFilament.costPerKg
     : 0;
 
   const previewMachineCost = selectedPrinter
-    ? ((Number(form.timeHours || 0) * 60 +
-        Number(form.timeMinutes || 0)) /
+    ? ((Number(form.timeHours || 0) * 60 + Number(form.timeMinutes || 0)) /
         60) *
       selectedPrinter.costPerHour
     : 0;
 
-  const previewTotalCost =
-    previewMaterialCost + previewMachineCost;
+  const previewTotalCost = previewMaterialCost + previewMachineCost;
 
   function resetForm() {
     setForm({
@@ -286,8 +272,7 @@ export default function PerdasPage() {
         timeMinutes: totalMinutes,
         materialCost: previewMaterialCost,
         machineCost: previewMachineCost,
-        observation:
-          form.observation.trim() || null,
+        observation: form.observation.trim() || null,
       });
 
       if (!created) {
@@ -302,9 +287,97 @@ export default function PerdasPage() {
   }
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#020617] text-white">
+    <main className="perdas-page relative min-h-screen overflow-hidden bg-[var(--app-background)] text-[var(--app-foreground)]">
+      <style jsx global>{`
+        html[data-theme="light"] .perdas-page {
+          color: var(--app-foreground);
+        }
+
+        /* Textos */
+        html[data-theme="light"] .perdas-page .text-white {
+          color: var(--app-foreground) !important;
+        }
+
+        html[data-theme="light"] .perdas-page [class*="text-slate-"] {
+          color: var(--muted) !important;
+        }
+
+        html[data-theme="light"] .perdas-page .text-orange-400,
+        html[data-theme="light"] .perdas-page .text-orange-300 {
+          color: #d95b0b !important;
+        }
+
+        /* Cards e superfícies */
+        html[data-theme="light"] .perdas-page [class*="bg-[#080e1b]"],
+        html[data-theme="light"] .perdas-page [class*="bg-[#020617]"] {
+          background-color: var(--surface) !important;
+        }
+
+        html[data-theme="light"] .perdas-page [class*="bg-white/"] {
+          background-color: var(--surface-light) !important;
+        }
+
+        /* Bordas */
+        html[data-theme="light"] .perdas-page [class*="border-white/"] {
+          border-color: var(--border) !important;
+        }
+
+        html[data-theme="light"] .perdas-page [class*="divide-white/"] > * + * {
+          border-color: var(--border) !important;
+        }
+
+        /* Campos */
+        html[data-theme="light"] .perdas-page input,
+        html[data-theme="light"] .perdas-page select,
+        html[data-theme="light"] .perdas-page textarea {
+          background-color: var(--surface-light) !important;
+          border-color: var(--border) !important;
+          color: var(--app-foreground) !important;
+        }
+
+        html[data-theme="light"] .perdas-page input::placeholder,
+        html[data-theme="light"] .perdas-page textarea::placeholder {
+          color: var(--muted) !important;
+          opacity: 0.7;
+        }
+
+        html[data-theme="light"] .perdas-page option {
+          background-color: var(--surface) !important;
+          color: var(--app-foreground) !important;
+        }
+
+        /* Tabela */
+        html[data-theme="light"] .perdas-page tbody tr:hover {
+          background-color: var(--surface-light) !important;
+        }
+
+        /* Botões principais */
+        html[data-theme="light"] .perdas-page button.bg-\\[\\#FD6401\\] {
+          background-color: #fd6401 !important;
+          color: #ffffff !important;
+        }
+
+        html[data-theme="light"] .perdas-page button.bg-\\[\\#FD6401\\] * {
+          color: #ffffff !important;
+        }
+
+        /* Elementos decorativos */
+        html[data-theme="light"] .perdas-page .perdas-background {
+          opacity: 0.35;
+        }
+
+        /* Modal */
+        html[data-theme="light"] .perdas-page .perdas-modal {
+          background-color: var(--surface) !important;
+          border-color: var(--border) !important;
+        }
+
+        html[data-theme="light"] .perdas-page .perdas-overlay {
+          background-color: rgba(15, 23, 42, 0.35) !important;
+        }
+      `}</style>
       {/* Background */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+      <div className="perdas-background pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -left-32 -top-32 h-[420px] w-[420px] rounded-full bg-orange-500/[0.07] blur-[120px]" />
 
         <div className="absolute right-0 top-[20%] h-[360px] w-[360px] rounded-full bg-blue-500/[0.04] blur-[120px]" />
@@ -328,9 +401,7 @@ export default function PerdasPage() {
 
               <ChevronDown className="h-3 w-3 rotate-[-90deg]" />
 
-              <span className="text-slate-400">
-                Perdas
-              </span>
+              <span className="text-slate-400">Perdas</span>
             </div>
 
             <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
@@ -344,7 +415,7 @@ export default function PerdasPage() {
 
           <Button
             onClick={() => setShowModal(true)}
-            className="h-11 gap-2 rounded-xl bg-[#FD6401] px-5 font-medium text-white shadow-lg shadow-orange-500/10 hover:bg-[#e95800]"
+            className="h-11 gap-2 rounded-xl !bg-[#FD6401] px-5 font-medium !text-white shadow-lg shadow-orange-500/10 hover:!bg-[#e95800] [&_*]:!text-white"
           >
             <Plus className="h-4 w-4" />
             Registrar perda
@@ -407,9 +478,7 @@ export default function PerdasPage() {
 
                       <input
                         value={search}
-                        onChange={(e) =>
-                          setSearch(e.target.value)
-                        }
+                        onChange={(e) => setSearch(e.target.value)}
                         placeholder="Buscar perda..."
                         className="h-10 w-full rounded-xl border border-white/[0.08] bg-white/[0.025] pl-9 pr-3 text-sm text-white outline-none placeholder:text-slate-600 transition focus:border-orange-500/40 sm:w-[210px]"
                       />
@@ -420,15 +489,10 @@ export default function PerdasPage() {
 
                       <select
                         value={reasonFilter}
-                        onChange={(e) =>
-                          setReasonFilter(e.target.value)
-                        }
+                        onChange={(e) => setReasonFilter(e.target.value)}
                         className="h-10 appearance-none rounded-xl border border-white/[0.08] bg-white/[0.025] pl-9 pr-9 text-sm text-slate-300 outline-none focus:border-orange-500/40"
                       >
-                        <option
-                          value="Todos"
-                          className="bg-[#0a1120]"
-                        >
+                        <option value="Todos" className="bg-[#0a1120]">
                           Todos os motivos
                         </option>
 
@@ -522,8 +586,7 @@ export default function PerdasPage() {
                                   </p>
 
                                   <p className="mt-0.5 max-w-[220px] truncate text-[11px] text-slate-600">
-                                    {loss.observation ||
-                                      "Sem observação."}
+                                    {loss.observation || "Sem observação."}
                                   </p>
                                 </div>
                               </div>
@@ -553,9 +616,7 @@ export default function PerdasPage() {
 
                             <td className="px-4 py-4 text-right">
                               <span className="text-xs text-slate-400">
-                                {formatTime(
-                                  Number(loss.timeMinutes || 0)
-                                )}
+                                {formatTime(Number(loss.timeMinutes || 0))}
                               </span>
                             </td>
 
@@ -566,9 +627,7 @@ export default function PerdasPage() {
 
                               <p className="mt-0.5 text-[10px] text-slate-600">
                                 mat.{" "}
-                                {formatCurrency(
-                                  Number(loss.materialCost || 0)
-                                )}
+                                {formatCurrency(Number(loss.materialCost || 0))}
                               </p>
                             </td>
                           </tr>
@@ -588,10 +647,7 @@ export default function PerdasPage() {
                       Number(loss.machineCost || 0);
 
                     return (
-                      <div
-                        key={loss.id}
-                        className="p-4"
-                      >
+                      <div key={loss.id} className="p-4">
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex items-center gap-3">
                             <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-orange-500/15 bg-orange-500/[0.07] text-[9px] font-bold text-orange-400">
@@ -632,9 +688,7 @@ export default function PerdasPage() {
                             </p>
 
                             <p className="mt-1 text-xs text-slate-400">
-                              {formatTime(
-                                Number(loss.timeMinutes || 0)
-                              )}
+                              {formatTime(Number(loss.timeMinutes || 0))}
                             </p>
                           </div>
                         </div>
@@ -685,26 +739,16 @@ export default function PerdasPage() {
                   <div className="relative">
                     <select
                       value={period}
-                      onChange={(e) =>
-                        setPeriod(e.target.value)
-                      }
+                      onChange={(e) => setPeriod(e.target.value)}
                       className="appearance-none rounded-lg border border-white/[0.07] bg-white/[0.025] py-1.5 pl-3 pr-7 text-[11px] text-slate-400 outline-none"
                     >
-                      <option className="bg-[#0a1120]">
-                        7 dias
-                      </option>
+                      <option className="bg-[#0a1120]">7 dias</option>
 
-                      <option className="bg-[#0a1120]">
-                        30 dias
-                      </option>
+                      <option className="bg-[#0a1120]">30 dias</option>
 
-                      <option className="bg-[#0a1120]">
-                        90 dias
-                      </option>
+                      <option className="bg-[#0a1120]">90 dias</option>
 
-                      <option className="bg-[#0a1120]">
-                        Este ano
-                      </option>
+                      <option className="bg-[#0a1120]">Este ano</option>
                     </select>
 
                     <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-slate-600" />
@@ -761,10 +805,7 @@ export default function PerdasPage() {
                         <div
                           className="h-full rounded-full bg-[#FD6401] transition-all"
                           style={{
-                            width: `${Math.max(
-                              item.percentage,
-                              3
-                            )}%`,
+                            width: `${Math.max(item.percentage, 3)}%`,
                           }}
                         />
                       </div>
@@ -824,7 +865,7 @@ export default function PerdasPage() {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+        <div className="perdas-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
           <div
             className="absolute inset-0"
             onClick={() => {
@@ -834,7 +875,7 @@ export default function PerdasPage() {
             }}
           />
 
-          <div className="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-white/[0.1] bg-[#080e1b] shadow-2xl shadow-black/50">
+          <div className="perdas-modal relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-white/[0.1] bg-[#080e1b] shadow-2xl shadow-black/50">
             {/* Modal header */}
             <div className="flex items-center justify-between border-b border-white/[0.07] px-6 py-5">
               <div>
@@ -1024,9 +1065,7 @@ export default function PerdasPage() {
               </div>
 
               {/* Preview */}
-              {(form.grams ||
-                form.timeHours ||
-                form.timeMinutes) && (
+              {(form.grams || form.timeHours || form.timeMinutes) && (
                 <div className="rounded-xl border border-orange-500/10 bg-orange-500/[0.035] p-4">
                   <div className="mb-3 flex items-center gap-2">
                     <DollarSign className="h-4 w-4 text-orange-400" />
@@ -1039,23 +1078,17 @@ export default function PerdasPage() {
                   <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
                     <PreviewValue
                       label="Material"
-                      value={formatCurrency(
-                        previewMaterialCost
-                      )}
+                      value={formatCurrency(previewMaterialCost)}
                     />
 
                     <PreviewValue
                       label="Máquina"
-                      value={formatCurrency(
-                        previewMachineCost
-                      )}
+                      value={formatCurrency(previewMachineCost)}
                     />
 
                     <PreviewValue
                       label="Total"
-                      value={formatCurrency(
-                        previewTotalCost
-                      )}
+                      value={formatCurrency(previewTotalCost)}
                     />
                   </div>
                 </div>
@@ -1078,11 +1111,7 @@ export default function PerdasPage() {
 
                 <Button
                   onClick={handleAddLoss}
-                  disabled={
-                    saving ||
-                    !form.grams ||
-                    Number(form.grams) <= 0
-                  }
+                  disabled={saving || !form.grams || Number(form.grams) <= 0}
                   className="h-11 rounded-xl bg-[#FD6401] px-6 text-sm font-medium text-white hover:bg-[#e95800] disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   {saving ? (
@@ -1130,17 +1159,13 @@ function MetricCard({
           </span>
         </div>
 
-        <p className="text-xs text-slate-500">
-          {label}
-        </p>
+        <p className="text-xs text-slate-500">{label}</p>
 
         <p className="mt-1 text-2xl font-semibold tracking-tight text-white">
           {value}
         </p>
 
-        <p className="mt-1 text-[10px] text-slate-700">
-          {description}
-        </p>
+        <p className="mt-1 text-[10px] text-slate-700">{description}</p>
       </CardContent>
     </Card>
   );
@@ -1158,13 +1183,9 @@ function CostRow({
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-2">
-        <span className="text-slate-600">
-          {icon}
-        </span>
+        <span className="text-slate-600">{icon}</span>
 
-        <span className="text-xs text-slate-500">
-          {label}
-        </span>
+        <span className="text-xs text-slate-500">{label}</span>
       </div>
 
       <span className="text-xs font-medium text-slate-300">
@@ -1174,22 +1195,14 @@ function CostRow({
   );
 }
 
-function PreviewValue({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
+function PreviewValue({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <p className="text-[10px] uppercase tracking-wider text-slate-600">
         {label}
       </p>
 
-      <p className="mt-1 text-sm font-semibold text-white">
-        {value}
-      </p>
+      <p className="mt-1 text-sm font-semibold text-white">{value}</p>
     </div>
   );
 }
@@ -1219,10 +1232,7 @@ function FormSelect({
           onChange={(e) => onChange(e.target.value)}
           className="h-11 w-full appearance-none rounded-xl border border-white/[0.08] bg-white/[0.025] px-3 pr-9 text-sm text-slate-300 outline-none focus:border-orange-500/40"
         >
-          <option
-            value=""
-            className="bg-[#0a1120]"
-          >
+          <option value="" className="bg-[#0a1120]">
             {placeholder}
           </option>
 

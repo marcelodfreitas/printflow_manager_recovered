@@ -29,18 +29,18 @@ function NotificationItem({
   onChange,
 }: NotificationItemProps) {
   return (
-    <div className="flex items-center justify-between gap-4 border-b border-white/5 py-5 last:border-b-0">
+    <div className="notification-item flex items-center justify-between gap-4 border-b border-white/5 py-5 last:border-b-0">
       <div className="flex min-w-0 items-center gap-4">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/5 text-white/50">
+        <div className="notification-icon flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/5 text-white/50">
           {icon}
         </div>
 
         <div className="min-w-0">
-          <h3 className="text-sm font-medium text-white">
+          <h3 className="notification-title text-sm font-medium text-white">
             {title}
           </h3>
 
-          <p className="mt-1 text-xs leading-relaxed text-white/40">
+          <p className="notification-description mt-1 text-xs leading-relaxed text-white/40">
             {description}
           </p>
         </div>
@@ -77,56 +77,131 @@ export default function NotificationsSettingsPage() {
   } = useUserSettings();
 
   async function toggleNotification(
-  key:
-    | "notificationsSystem"
-    | "notificationsNewOrder"
-    | "notificationsOrderUpdate"
-    | "notificationsPrinterOffline"
-    | "notificationsPrintFailed"
-    | "notificationsPrintCompleted"
-    | "notificationsLowStock"
-    | "notificationsEmail",
-  databaseKey: string
-) {
-  if (!settings) return;
+    key:
+      | "notificationsSystem"
+      | "notificationsNewOrder"
+      | "notificationsOrderUpdate"
+      | "notificationsPrinterOffline"
+      | "notificationsPrintFailed"
+      | "notificationsPrintCompleted"
+      | "notificationsLowStock"
+      | "notificationsEmail",
+    databaseKey: string
+  ) {
+    if (!settings) return;
 
-  const currentValue = settings[key];
+    const currentValue = settings[key];
 
-  if (typeof currentValue !== "boolean") return;
+    if (typeof currentValue !== "boolean") return;
 
-  await updateSettings({
-    [databaseKey]: !currentValue,
-  });
-}
+    await updateSettings({
+      [databaseKey]: !currentValue,
+    });
+  }
 
   if (loading || !settings) {
     return (
-      <div className="mx-auto w-full max-w-4xl space-y-6 pt-8">
-        <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
+      <div className="notifications-page mx-auto w-full max-w-4xl space-y-6 pt-8">
+        <div className="notification-section rounded-3xl border border-white/10 bg-white/[0.03] p-6">
           <div className="h-5 w-40 animate-pulse rounded bg-white/10" />
 
           <div className="mt-3 h-4 w-72 animate-pulse rounded bg-white/5" />
 
           <div className="mt-6 space-y-5">
-            <div className="h-16 animate-pulse rounded-2xl bg-white/[0.03]" />
-            <div className="h-16 animate-pulse rounded-2xl bg-white/[0.03]" />
-            <div className="h-16 animate-pulse rounded-2xl bg-white/[0.03]" />
+            <div className="notification-skeleton h-16 animate-pulse rounded-2xl bg-white/[0.03]" />
+            <div className="notification-skeleton h-16 animate-pulse rounded-2xl bg-white/[0.03]" />
+            <div className="notification-skeleton h-16 animate-pulse rounded-2xl bg-white/[0.03]" />
           </div>
         </div>
+
+        <style jsx global>{`
+          html[data-theme="light"] .notifications-page .notification-section {
+            background: var(--surface);
+            border-color: var(--border);
+          }
+
+          html[data-theme="light"] .notifications-page .notification-skeleton {
+            background: var(--surface-light);
+          }
+
+          html[data-theme="light"] .notifications-page h2,
+html[data-theme="light"] .notifications-page h3 {
+  color: var(--app-foreground) !important;
+}
+
+html[data-theme="light"] .notifications-page p {
+  color: var(--muted) !important;
+}
+
+html[data-theme="light"] .notifications-page .text-white,
+html[data-theme="light"] .notifications-page [class*="text-white/"] {
+  color: var(--app-foreground) !important;
+}
+
+/* Textos secundários */
+html[data-theme="light"] .notifications-page .notification-description {
+  color: var(--muted) !important;
+}
+
+/* Ícones */
+html[data-theme="light"] .notifications-page .notification-icon {
+  color: var(--muted) !important;
+}
+
+/* Switch desligado */
+html[data-theme="light"] .notifications-page button.bg-white\/10 {
+  background: var(--border) !important;
+}
+        `}</style>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-6 pt-8 pb-8">
-      {/* SISTEMA */}
-      <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-4 sm:p-6">
-        <div className="mb-2">
-          <h2 className="text-base font-semibold text-white">
-            Sistema
-          </h2>
+    <div className="notifications-page mx-auto w-full max-w-4xl space-y-6 pt-8 pb-8">
+      <style jsx global>{`
+        html[data-theme="light"] .notifications-page .notification-section {
+          background: var(--surface);
+          border-color: var(--border);
+        }
 
-          <p className="mt-1 text-sm text-white/40">
+        html[data-theme="light"] .notifications-page .notification-item {
+          border-color: var(--border);
+        }
+
+        html[data-theme="light"] .notifications-page .notification-title {
+          color: var(--app-foreground);
+        }
+
+        html[data-theme="light"] .notifications-page .notification-description {
+          color: var(--muted);
+        }
+
+        html[data-theme="light"] .notifications-page .notification-icon {
+          background: var(--surface-light);
+          color: var(--muted);
+        }
+
+        html[data-theme="light"] .notifications-page .notification-item button:not(:disabled):not([class*="accent-bg"]) {
+          background: var(--border);
+        }
+
+        html[data-theme="light"] .notifications-page .notification-heading {
+  color: var(--app-foreground) !important;
+}
+      `}</style>
+
+      {/* SISTEMA */}
+      <section className="notification-section rounded-3xl border border-white/10 bg-white/[0.03] p-4 sm:p-6">
+        <div className="mb-2">
+          <h2
+  className="text-base font-semibold text-white"
+  style={{ color: "var(--app-foreground)" }}
+>
+  Sistema
+</h2>
+
+          <p className="mt-1 text-sm text-white/40" style={{ color: "var(--app-foreground)" }}>
             Notificações gerais e avisos importantes do PrintFlow.
           </p>
         </div>
@@ -146,13 +221,13 @@ export default function NotificationsSettingsPage() {
       </section>
 
       {/* PEDIDOS */}
-      <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-4 sm:p-6">
+      <section className="notification-section rounded-3xl border border-white/10 bg-white/[0.03] p-4 sm:p-6">
         <div className="mb-2">
-          <h2 className="text-base font-semibold text-white">
+          <h2 className="text-base font-semibold text-white" style={{ color: "var(--app-foreground)" }} >
             Pedidos
           </h2>
 
-          <p className="mt-1 text-sm text-white/40">
+          <p className="mt-1 text-sm text-white/40" style={{ color: "var(--app-foreground)" }}>
             Acompanhe alterações e eventos relacionados aos seus pedidos.
           </p>
         </div>
@@ -185,13 +260,13 @@ export default function NotificationsSettingsPage() {
       </section>
 
       {/* IMPRESSORAS */}
-      <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-4 sm:p-6">
+      <section className="notification-section rounded-3xl border border-white/10 bg-white/[0.03] p-4 sm:p-6">
         <div className="mb-2">
-          <h2 className="text-base font-semibold text-white">
+          <h2 className="text-base font-semibold text-white" style={{ color: "var(--app-foreground)" }}>
             Impressoras
           </h2>
 
-          <p className="mt-1 text-sm text-white/40">
+          <p className="mt-1 text-sm text-white/40" style={{ color: "var(--app-foreground)" }}>
             Receba alertas relacionados às suas impressoras 3D.
           </p>
         </div>
@@ -237,13 +312,13 @@ export default function NotificationsSettingsPage() {
       </section>
 
       {/* ESTOQUE */}
-      <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-4 sm:p-6">
+      <section className="notification-section rounded-3xl border border-white/10 bg-white/[0.03] p-4 sm:p-6">
         <div className="mb-2">
-          <h2 className="text-base font-semibold text-white">
+          <h2 className="text-base font-semibold text-white" style={{ color: "var(--app-foreground)" }}>
             Estoque
           </h2>
 
-          <p className="mt-1 text-sm text-white/40">
+          <p className="mt-1 text-sm text-white/40" style={{ color: "var(--app-foreground)" }}>
             Controle alertas relacionados aos seus materiais.
           </p>
         </div>
@@ -263,13 +338,13 @@ export default function NotificationsSettingsPage() {
       </section>
 
       {/* CANAIS */}
-      <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-4 sm:p-6">
+      <section className="notification-section rounded-3xl border border-white/10 bg-white/[0.03] p-4 sm:p-6">
         <div className="mb-2">
-          <h2 className="text-base font-semibold text-white">
+          <h2 className="text-base font-semibold text-white" style={{ color: "var(--app-foreground)" }}>
             Canais de comunicação
           </h2>
 
-          <p className="mt-1 text-sm text-white/40">
+          <p className="mt-1 text-sm text-white/40" style={{ color: "var(--app-foreground)" }}>
             Escolha por onde deseja receber suas notificações.
           </p>
         </div>

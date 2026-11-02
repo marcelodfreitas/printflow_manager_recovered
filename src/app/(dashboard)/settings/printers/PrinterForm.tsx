@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -114,7 +115,55 @@ export default function PrinterForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form className="printer-form space-y-6" onSubmit={handleSubmit}>
+      <style jsx global>{`
+        /* Textos */
+        html[data-theme="light"] .printer-form .text-white {
+          color: var(--app-foreground) !important;
+        }
+
+        html[data-theme="light"] .printer-form [class*="text-white/"] {
+          color: var(--muted) !important;
+        }
+
+        /* Divisores */
+        html[data-theme="light"] .printer-form .border-white\\/10 {
+          border-color: var(--border) !important;
+        }
+
+        /* Campo de observações */
+        html[data-theme="light"] .printer-form textarea {
+          background-color: var(--surface-light) !important;
+          border-color: var(--border) !important;
+          color: var(--app-foreground) !important;
+        }
+
+        html[data-theme="light"] .printer-form textarea::placeholder {
+          color: var(--muted) !important;
+          opacity: 0.7;
+        }
+
+        /* Botão cancelar */
+        html[data-theme="light"] .printer-form button.border-white\\/10 {
+          background-color: var(--surface-light) !important;
+          border-color: var(--border) !important;
+          color: var(--app-foreground) !important;
+        }
+
+        html[data-theme="light"] .printer-form button.border-white\\/10:hover {
+          background-color: var(--surface) !important;
+        }
+
+        /* Botão principal */
+        html[data-theme="light"] .printer-form button.accent-bg {
+          color: #ffffff !important;
+        }
+
+        html[data-theme="light"] .printer-form button.accent-bg * {
+          color: #ffffff !important;
+        }
+      `}</style>
+
       {/* IDENTIFICAÇÃO */}
       <div>
         <h3 className="text-sm font-semibold text-white">
@@ -150,10 +199,7 @@ export default function PrinterForm({
                 value={form.manufacturer}
                 placeholder="Ex.: Bambu Lab"
                 onChange={(event) =>
-                  updateField(
-                    "manufacturer",
-                    event.target.value
-                  )
+                  updateField("manufacturer", event.target.value)
                 }
               />
             </div>
@@ -234,10 +280,7 @@ export default function PrinterForm({
               value={form.dimension_x}
               placeholder="256"
               onChange={(event) =>
-                updateField(
-                  "dimension_x",
-                  event.target.value
-                )
+                updateField("dimension_x", event.target.value)
               }
             />
           </div>
@@ -253,10 +296,7 @@ export default function PrinterForm({
               value={form.dimension_y}
               placeholder="256"
               onChange={(event) =>
-                updateField(
-                  "dimension_y",
-                  event.target.value
-                )
+                updateField("dimension_y", event.target.value)
               }
             />
           </div>
@@ -272,10 +312,7 @@ export default function PrinterForm({
               value={form.dimension_z}
               placeholder="256"
               onChange={(event) =>
-                updateField(
-                  "dimension_z",
-                  event.target.value
-                )
+                updateField("dimension_z", event.target.value)
               }
             />
           </div>
@@ -333,9 +370,9 @@ export default function PrinterForm({
               text-sm
               text-white
               placeholder:text-white/25
-              outlvar(--accent)e
+              outline-none
               transition
-              focus:border-[varvar(--accent)nt)]/60
+              focus:border-[var(--accent)]/60
               focus:ring-2
               focus:ring-[var(--accent)]/20
             "

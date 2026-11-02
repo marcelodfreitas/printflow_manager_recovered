@@ -187,7 +187,96 @@ const formatScale = (value: number | null) =>
   }
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#050914] text-white">
+    <main className="calculos-page relative min-h-screen overflow-hidden bg-[var(--app-background)] text-[var(--app-foreground)]">
+      <style jsx global>{`
+  /* TEXTOS */
+  html[data-theme="light"] .calculos-page .text-white {
+    color: var(--app-foreground) !important;
+  }
+
+  html[data-theme="light"] .calculos-page [class*="text-white/"] {
+    color: var(--muted) !important;
+  }
+
+  /* PRESERVA TEXTOS BRANCOS EM BOTÕES LARANJAS */
+  html[data-theme="light"] .calculos-page button.bg-\\[\\#FD6401\\],
+  html[data-theme="light"] .calculos-page button.bg-\\[\\#FD6401\\] * {
+    color: #ffffff !important;
+  }
+
+  /* SUPERFÍCIES E CARDS */
+  html[data-theme="light"] .calculos-page [class*="bg-[#0A1120]"],
+  html[data-theme="light"] .calculos-page [class*="bg-[#050914]"],
+  html[data-theme="light"] .calculos-page [class*="bg-white/"] {
+    background-color: var(--surface) !important;
+  }
+
+  /* GRADIENTES DECORATIVOS */
+  html[data-theme="light"] .calculos-page .bg-gradient-to-br {
+    background-image: none !important;
+    background-color: var(--surface) !important;
+  }
+
+  /* MANTÉM OS DESTAQUES LARANJAS */
+  html[data-theme="light"] .calculos-page [class*="text-[#FD6401]"] {
+    color: var(--accent) !important;
+  }
+
+  html[data-theme="light"] .calculos-page [class*="border-[#FD6401]"] {
+    border-color: color-mix(in srgb, var(--accent) 30%, transparent) !important;
+  }
+
+  /* BORDAS */
+  html[data-theme="light"] .calculos-page [class*="border-white/"] {
+    border-color: var(--border) !important;
+  }
+
+  /* CAMPOS */
+  html[data-theme="light"] .calculos-page input,
+  html[data-theme="light"] .calculos-page select,
+  html[data-theme="light"] .calculos-page textarea {
+    color: var(--foreground);
+    background-color: var(--surface-light);
+  }
+
+  html[data-theme="light"] .calculos-page input::placeholder {
+    color: var(--muted);
+  }
+
+  html[data-theme="light"] .calculos-page option {
+    color: var(--foreground);
+    background-color: var(--surface);
+  }
+
+  /* SLIDERS */
+  html[data-theme="light"] .calculos-page input[type="range"] {
+    background-color: transparent;
+  }
+
+  /* BOTÕES NEUTROS */
+  html[data-theme="light"] .calculos-page button:not([class*="bg-[#FD6401]"]) {
+    border-color: var(--border);
+  }
+
+  /* RESULTADOS E VALORES */
+  html[data-theme="light"] .calculos-page .text-emerald-400 {
+    color: #059669 !important;
+  }
+
+  html[data-theme="light"] .calculos-page .text-rose-400 {
+    color: #e11d48 !important;
+  }
+
+  html[data-theme="light"] .calculos-page .text-amber-400 {
+    color: #d97706 !important;
+  }
+
+  /* SOMBRAS */
+  html[data-theme="light"] .calculos-page [class*="shadow-black/"] {
+    --tw-shadow-color: transparent;
+  }
+`}</style>
+      
       <div className="pointer-events-none fixed -right-40 top-10 h-[520px] w-[520px] rounded-full bg-[#071124]/70 blur-[130px]" />
       <div className="pointer-events-none fixed -bottom-40 left-1/3 h-[520px] w-[520px] rounded-full bg-[#FD6401]/[0.06] blur-[140px]" />
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.035)_1px,transparent_0)] bg-[size:32px_32px]" />

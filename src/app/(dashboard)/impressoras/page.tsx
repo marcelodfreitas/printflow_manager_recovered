@@ -488,7 +488,93 @@ energyRateReference:
   }
 
   return (
-    <div className="relative min-h-screen bg-[#050914]">
+    <div className="printers-page relative min-h-screen bg-[var(--app-background)] text-[var(--app-foreground)]">
+      <style jsx global>{`
+  /* Textos */
+  html[data-theme="light"] .printers-page .text-white {
+    color: var(--app-foreground) !important;
+  }
+
+  html[data-theme="light"] .printers-page [class*="text-white/"] {
+    color: var(--muted) !important;
+  }
+
+  html[data-theme="light"] .printers-page .text-[var(--accent)] {
+    color: var(--accent) !important;
+  }
+
+  /* Superfícies */
+  html[data-theme="light"] .printers-page [class*="bg-white/"],
+  html[data-theme="light"] .printers-page [class*="bg-[#071124]"],
+  html[data-theme="light"] .printers-page [class*="bg-[#0d1a35]"],
+  html[data-theme="light"] .printers-page [class*="bg-[#0a1120]"],
+  html[data-theme="light"] .printers-page [class*="bg-[#050914]"] {
+    background-color: var(--surface) !important;
+  }
+
+  /* Gradientes dos botões */
+  html[data-theme="light"] .printers-page button.bg-gradient-to-r {
+    background-image: linear-gradient(to right, #071124, #0d1a35) !important;
+    background-color: #071124 !important;
+    color: #ffffff !important;
+  }
+
+  html[data-theme="light"] .printers-page button.bg-gradient-to-r * {
+    color: #ffffff !important;
+  }
+
+  /* Bordas */
+  html[data-theme="light"] .printers-page [class*="border-white/"] {
+    border-color: var(--border) !important;
+  }
+
+  /* Campos */
+  html[data-theme="light"] .printers-page input,
+  html[data-theme="light"] .printers-page select,
+  html[data-theme="light"] .printers-page textarea {
+    background-color: var(--surface-light) !important;
+    border-color: var(--border) !important;
+    color: var(--app-foreground) !important;
+  }
+
+  html[data-theme="light"] .printers-page input::placeholder {
+    color: var(--muted) !important;
+    opacity: 0.7;
+  }
+
+  html[data-theme="light"] .printers-page option {
+    background-color: var(--surface) !important;
+    color: var(--app-foreground) !important;
+  }
+
+  /* Cards */
+  html[data-theme="light"] .printers-page [class*="shadow-black/"] {
+    --tw-shadow-color: transparent !important;
+  }
+
+  /* Hover dos cards */
+  html[data-theme="light"] .printers-page .group:hover {
+    background-color: var(--surface-light) !important;
+  }
+
+  /* Modal */
+  html[data-theme="light"] .printers-page [class*="bg-[#0a1120]"] {
+    background-color: var(--surface) !important;
+  }
+
+  /* Status e indicadores sem alterar suas cores semânticas */
+  html[data-theme="light"] .printers-page .text-emerald-300 {
+    color: #059669 !important;
+  }
+
+  html[data-theme="light"] .printers-page .text-amber-300 {
+    color: #b45309 !important;
+  }
+
+  html[data-theme="light"] .printers-page .text-red-300 {
+    color: #dc2626 !important;
+  }
+`}</style>
       <div className="pointer-events-none fixed -bottom-40 -right-40 h-[500px] w-[500px] rounded-full bg-[#071124]/60 blur-[120px]" />
 
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.06)_1px,transparent_0)] bg-[size:32px_32px]" />

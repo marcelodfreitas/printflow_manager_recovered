@@ -366,7 +366,90 @@ const [editStockError, setEditStockError] = useState("");
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden">
+    <div className="filaments-page relative min-h-screen overflow-hidden bg-[var(--app-background)] text-[var(--app-foreground)]">
+      <style jsx global>{`
+  /* TEXTOS */
+  html[data-theme="light"] .filaments-page {
+    color: var(--app-foreground);
+  }
+
+  html[data-theme="light"] .filaments-page .text-white {
+    color: var(--app-foreground) !important;
+  }
+
+  html[data-theme="light"] .filaments-page [class*="text-white/"] {
+    color: var(--muted) !important;
+  }
+
+  /* PRESERVA TEXTO BRANCO NOS BOTÕES ESCUROS */
+  html[data-theme="light"] .filaments-page button.bg-gradient-to-r,
+  html[data-theme="light"] .filaments-page button.bg-gradient-to-r * {
+    color: #ffffff !important;
+  }
+
+  html[data-theme="light"] .filaments-page button.bg-gradient-to-r {
+  background-image: linear-gradient(to right, #071124, #0d1a35) !important;
+}
+
+  /* CARTÕES E SUPERFÍCIES */
+  html[data-theme="light"] .filaments-page [class*="bg-white/"] {
+    background-color: var(--surface-light) !important;
+  }
+
+  html[data-theme="light"] .filaments-page [class*="bg-[#050914]"],
+  html[data-theme="light"] .filaments-page [class*="bg-[#071124]"],
+  html[data-theme="light"] .filaments-page [class*="bg-[#0d1a35]"],
+  html[data-theme="light"] .filaments-page [class*="bg-[#0a1120]"],
+  html[data-theme="light"] .filaments-page [class*="bg-[#0A1120]"],
+  html[data-theme="light"] .filaments-page [class*="bg-black/"] {
+    background-color: var(--surface) !important;
+  }
+
+  /* GRADIENTES DECORATIVOS */
+  html[data-theme="light"] .filaments-page .bg-gradient-to-br,
+  html[data-theme="light"] .filaments-page .bg-gradient-to-r {
+    background-image: none !important;
+    background-color: var(--surface) !important;
+  }
+
+  /* BORDAS */
+  html[data-theme="light"] .filaments-page [class*="border-white/"] {
+    border-color: var(--border) !important;
+  }
+
+  /* CAMPOS DE FORMULÁRIO */
+  html[data-theme="light"] .filaments-page input,
+  html[data-theme="light"] .filaments-page select,
+  html[data-theme="light"] .filaments-page textarea {
+    color: var(--foreground);
+    background-color: var(--surface-light);
+  }
+
+  html[data-theme="light"] .filaments-page input::placeholder,
+  html[data-theme="light"] .filaments-page textarea::placeholder {
+    color: var(--muted);
+  }
+
+  html[data-theme="light"] .filaments-page option {
+    background-color: var(--surface);
+    color: var(--foreground);
+  }
+
+  /* INPUT DE SELEÇÃO DE COR */
+  html[data-theme="light"] .filaments-page input[type="color"] {
+    background-color: transparent !important;
+  }
+
+  /* TABELA */
+  html[data-theme="light"] .filaments-page tr:hover {
+    background-color: var(--surface-light);
+  }
+
+  /* MODAIS */
+  html[data-theme="light"] .filaments-page [role="dialog"] {
+    color: var(--foreground);
+  }
+`}</style>
       {/* Background */}
       <div className="pointer-events-none fixed inset-0 -z-10 bg-[#050914]" />
 

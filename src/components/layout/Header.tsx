@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Bell,
   CheckCheck,
@@ -12,6 +12,9 @@ import {
   Settings,
   LogOut,
 } from "lucide-react";
+import { Sun, Moon } from "lucide-react";
+import { useTheme } from "@/contexts/ThemeContext";
+
 import { usePathname, useRouter } from "next/navigation";
 
 import { useAuth } from "@/contexts/AuthContext";
@@ -70,6 +73,8 @@ export function Header({ title, className }: HeaderProps) {
   const pathname = usePathname();
   const router = useRouter();
 
+  const { mode, setMode } = useTheme();
+
   const { profile, logout } = useAuth();
   const { toggle } = useMobileNav();
 
@@ -82,6 +87,28 @@ export function Header({ title, className }: HeaderProps) {
 
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
+
+// Recupera o tema salvo
+useEffect(() => {
+  const savedTheme = localStorage.getItem("printflow-theme");
+
+  const initialTheme = savedTheme === "light" ? "light" : "dark";
+
+  setTheme(initialTheme);
+  document.documentElement.setAttribute("data-theme", initialTheme);
+}, []);
+
+function toggleTheme() {
+  const nextTheme = theme === "dark" ? "light" : "dark";
+
+  setTheme(nextTheme);
+
+  document.documentElement.setAttribute("data-theme", nextTheme);
+
+  localStorage.setItem("printflow-theme", nextTheme);
+}
 
   const pageTitles: Record<string, string> = {
     "/": "Dashboard",
@@ -152,6 +179,32 @@ export function Header({ title, className }: HeaderProps) {
 
       {/* RIGHT SIDE */}
       <div className="flex items-center gap-1 sm:gap-2">
+        {/* THEME TOGGLE */}
+<button
+  type="button"
+  onClick={() =>
+    setMode(mode === "dark" ? "light" : "dark")
+  }
+  aria-label={
+    mode === "dark"
+      ? "Ativar modo claro"
+      : "Ativar modo escuro"
+  }
+  title={mode === "dark" ? "Modo claro" : "Modo escuro"}
+  className="
+    flex h-9 w-9 items-center justify-center
+    rounded-xl text-white/50
+    transition-all duration-200
+    hover:bg-white/[0.06]
+    hover:text-[#FD6401]
+  "
+>
+  {mode === "dark" ? (
+    <Sun className="h-[18px] w-[18px]" />
+  ) : (
+    <Moon className="h-[18px] w-[18px]" />
+  )}
+</button>
         {/* NOTIFICATIONS */}
         <div className="relative">
           <button

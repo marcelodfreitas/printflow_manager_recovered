@@ -547,9 +547,83 @@ export default function OrdersPage() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#050914]">
+    <div className="orders-page relative min-h-screen overflow-hidden bg-[var(--app-background)] text-[var(--app-foreground)]">
+
+      <style jsx global>{`
+  /* TEXTOS */
+  html[data-theme="light"] .orders-page .text-white {
+    color: var(--app-foreground) !important;
+  }
+
+  html[data-theme="light"] .orders-page [class*="text-white/"] {
+    color: var(--muted) !important;
+  }
+
+  /* PRESERVA TEXTO BRANCO NOS BOTÕES LARANJAS */
+  html[data-theme="light"] .orders-page button.bg-gradient-to-r,
+  html[data-theme="light"] .orders-page button.bg-\\[\\#fd6401\\] {
+    color: #ffffff !important;
+  }
+
+  /* FUNDOS DOS CARTÕES */
+  html[data-theme="light"] .orders-page [class*="bg-white/"] {
+    background-color: var(--surface-light) !important;
+  }
+
+  html[data-theme="light"] .orders-page [class*="bg-[#050914]"],
+  html[data-theme="light"] .orders-page [class*="bg-[#071124]"],
+  html[data-theme="light"] .orders-page [class*="bg-[#0a1120]"],
+  html[data-theme="light"] .orders-page [class*="bg-[#0A1120]"] {
+    background-color: var(--surface) !important;
+  }
+
+  /* GRADIENTES */
+  html[data-theme="light"] .orders-page .bg-gradient-to-br {
+    background-image: none !important;
+    background-color: var(--surface) !important;
+  }
+
+  /* BORDAS */
+  html[data-theme="light"] .orders-page [class*="border-white/"] {
+    border-color: var(--border) !important;
+  }
+
+  /* CAMPOS DE FORMULÁRIO */
+  html[data-theme="light"] .orders-page input,
+  html[data-theme="light"] .orders-page select,
+  html[data-theme="light"] .orders-page textarea {
+    color: var(--foreground);
+    background-color: var(--surface-light);
+  }
+
+  html[data-theme="light"] .orders-page input::placeholder,
+  html[data-theme="light"] .orders-page textarea::placeholder {
+    color: var(--muted);
+  }
+
+  html[data-theme="light"] .orders-page option {
+    background-color: var(--surface);
+    color: var(--foreground);
+  }
+
+  /* TABELA */
+  html[data-theme="light"] .orders-page tr:hover {
+    background-color: var(--surface-light);
+  }
+
+  /* MODAL */
+  html[data-theme="light"] .orders-page [role="dialog"] {
+    color: var(--foreground);
+  }
+
+  /* ÍCONES COM OPACIDADE BRANCA */
+  html[data-theme="light"] .orders-page svg.text-white\\/30,
+  html[data-theme="light"] .orders-page svg.text-white\\/40 {
+    color: var(--muted);
+  }
+`}</style>
       <div className="pointer-events-none fixed -right-40 -top-40 h-[500px] w-[500px] rounded-full bg-[rgba(var(--accent-rgb),0.06)] blur-[140px]" />
-      <div className="pointer-events-none fixed -bottom-40 -left-40 h-[500px] w-[500px] rounded-full bg-[#071124]/70 blur-[140px]" />
+     
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.045)_1px,transparent_0)] bg-[size:32px_32px]" />
 
       <div className="relative space-y-6 px-4 py-5 sm:p-6">

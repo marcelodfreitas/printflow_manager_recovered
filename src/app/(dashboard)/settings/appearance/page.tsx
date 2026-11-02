@@ -42,15 +42,70 @@ export default function AppearanceSettingsPage() {
   const { accent, animations, setAccent, setAnimations } = useTheme();
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-6 pt-8">
+    <div className="appearance-page mx-auto w-full max-w-4xl space-y-6 pt-8 pb-8">
+      <style jsx global>{`
+        html[data-theme="light"] .appearance-page .appearance-section {
+          background: var(--surface);
+          border-color: var(--border);
+        }
+
+        html[data-theme="light"] .appearance-page .appearance-title {
+          color: var(--app-foreground);
+        }
+
+        html[data-theme="light"] .appearance-page .appearance-description {
+          color: var(--muted);
+        }
+
+        html[data-theme="light"] .appearance-page .appearance-option {
+          background: var(--surface-light);
+          border-color: var(--border);
+        }
+
+        html[data-theme="light"] .appearance-page .appearance-option:hover {
+          border-color: var(--accent);
+        }
+
+        html[data-theme="light"] .appearance-page .appearance-icon {
+          background: var(--surface-light);
+          color: var(--muted);
+        }
+
+        html[data-theme="light"] .appearance-page .appearance-preview {
+          background: var(--surface-light);
+          border-color: var(--border);
+        }
+
+        html[data-theme="light"] .appearance-page .appearance-preview-card {
+          background: var(--surface);
+          border-color: var(--border);
+        }
+
+        html[data-theme="light"] .appearance-page .appearance-preview-muted {
+          color: var(--muted);
+        }
+
+        html[data-theme="light"] .appearance-page .appearance-preview-title {
+          color: var(--app-foreground);
+        }
+
+        html[data-theme="light"] .appearance-page .appearance-selected-label {
+          color: var(--app-foreground);
+        }
+
+        html[data-theme="light"] .appearance-page .appearance-toggle-off {
+          background: var(--border);
+        }
+      `}</style>
+
       {/* COR DE DESTAQUE */}
-      <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
+      <section className="appearance-section rounded-3xl border border-white/10 bg-white/[0.03] p-6">
         <div>
           <h2 className="accent-text text-base font-semibold">
             Cor de destaque
           </h2>
 
-          <p className="mt-1 text-sm text-white/40">
+          <p className="appearance-description mt-1 text-sm text-white/40">
             Escolha a cor principal utilizada nos elementos ativos.
           </p>
         </div>
@@ -66,7 +121,7 @@ export default function AppearanceSettingsPage() {
                 type="button"
                 onClick={() => setAccent(color)}
                 title={option.label}
-                className={`relative flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] transition ${
+                className={`appearance-option relative flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] transition ${
                   selected
                     ? "ring-2 accent-ring ring-offset-2 ring-offset-[#08111f]"
                     : "hover:border-white/20"
@@ -88,25 +143,29 @@ export default function AppearanceSettingsPage() {
           <span
             className={`h-2 w-2 rounded-full ${accentColors[accent].color}`}
           />
+
           Cor selecionada:
-          <span className="text-white/60">{accentColors[accent].label}</span>
+
+          <span className="appearance-selected-label text-white/60">
+            {accentColors[accent].label}
+          </span>
         </div>
       </section>
 
       {/* ANIMAÇÕES */}
-      <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
+      <section className="appearance-section rounded-3xl border border-white/10 bg-white/[0.03] p-6">
         <div className="flex items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-4">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/5 text-white/50">
+            <div className="appearance-icon flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/5 text-white/50">
               <Sparkles className="h-5 w-5" />
             </div>
 
             <div>
-              <h2 className="text-sm font-medium text-white">
+              <h2 className="appearance-title text-sm font-medium text-white">
                 Animações da interface
               </h2>
 
-              <p className="mt-1 text-xs leading-relaxed text-white/40">
+              <p className="appearance-description mt-1 text-xs leading-relaxed text-white/40">
                 Ative ou desative transições e efeitos visuais do sistema.
               </p>
             </div>
@@ -117,7 +176,7 @@ export default function AppearanceSettingsPage() {
             onClick={() => setAnimations(!animations)}
             aria-pressed={animations}
             className={`relative h-6 w-11 shrink-0 rounded-full transition ${
-              animations ? "accent-bg" : "bg-white/10"
+              animations ? "accent-bg" : "appearance-toggle-off bg-white/10"
             }`}
           >
             <span
@@ -130,23 +189,25 @@ export default function AppearanceSettingsPage() {
       </section>
 
       {/* PRÉ-VISUALIZAÇÃO */}
-      <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
+      <section className="appearance-section rounded-3xl border border-white/10 bg-white/[0.03] p-6">
         <div>
-          <h2 className="text-base font-semibold text-white">
+          <h2 className="appearance-title text-base font-semibold text-white">
             Pré-visualização
           </h2>
 
-          <p className="mt-1 text-sm text-white/40">
+          <p className="appearance-description mt-1 text-sm text-white/40">
             Veja como a cor escolhida será utilizada na interface.
           </p>
         </div>
 
-        <div className="mt-5 rounded-2xl border border-white/10 bg-[#08111f] p-5">
-          <div className="flex items-center justify-between">
+        <div className="appearance-preview mt-5 rounded-2xl border border-white/10 bg-[#08111f] p-5">
+          <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-semibold text-white">Dashboard</p>
+              <p className="appearance-preview-title text-sm font-semibold text-white">
+                Dashboard
+              </p>
 
-              <p className="mt-1 text-xs text-white/40">
+              <p className="appearance-preview-muted mt-1 text-xs text-white/40">
                 Visão geral da produção
               </p>
             </div>
@@ -157,22 +218,34 @@ export default function AppearanceSettingsPage() {
           </div>
 
           <div className="mt-5 grid gap-3 sm:grid-cols-3">
-            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-              <p className="text-xs text-white/40">Pedidos</p>
+            <div className="appearance-preview-card rounded-xl border border-white/10 bg-white/[0.03] p-4">
+              <p className="appearance-preview-muted text-xs text-white/40">
+                Pedidos
+              </p>
 
-              <p className="mt-2 text-xl font-semibold text-white">24</p>
+              <p className="appearance-preview-title mt-2 text-xl font-semibold text-white">
+                24
+              </p>
             </div>
 
-            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-              <p className="text-xs text-white/40">Produção</p>
+            <div className="appearance-preview-card rounded-xl border border-white/10 bg-white/[0.03] p-4">
+              <p className="appearance-preview-muted text-xs text-white/40">
+                Produção
+              </p>
 
-              <p className="mt-2 text-xl font-semibold text-white">12</p>
+              <p className="appearance-preview-title mt-2 text-xl font-semibold text-white">
+                12
+              </p>
             </div>
 
-            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-              <p className="text-xs text-white/40">Impressoras</p>
+            <div className="appearance-preview-card rounded-xl border border-white/10 bg-white/[0.03] p-4">
+              <p className="appearance-preview-muted text-xs text-white/40">
+                Impressoras
+              </p>
 
-              <p className="mt-2 text-xl font-semibold text-white">4</p>
+              <p className="appearance-preview-title mt-2 text-xl font-semibold text-white">
+                4
+              </p>
             </div>
           </div>
         </div>

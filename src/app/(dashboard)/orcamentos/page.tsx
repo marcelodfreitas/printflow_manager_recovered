@@ -847,7 +847,95 @@ const discountPercent = calcDiscountPercent();
 
   if (loading) {
     return (
-      <div className="relative min-h-screen bg-[#050914]">
+      <div className="quotes-page relative min-h-screen bg-[var(--app-background)] text-[var(--app-foreground)]">
+        <style jsx global>{`
+  /* TEXTOS */
+  html[data-theme="light"] .quotes-page {
+    color: var(--app-foreground);
+  }
+
+  html[data-theme="light"] .quotes-page .text-white {
+    color: var(--app-foreground) !important;
+  }
+
+  html[data-theme="light"] .quotes-page [class*="text-white/"] {
+    color: var(--muted) !important;
+  }
+
+  /* PRESERVA TEXTO BRANCO NOS BOTÕES ESCUROS */
+  html[data-theme="light"] .quotes-page button.bg-gradient-to-r,
+  html[data-theme="light"] .quotes-page button.bg-\\[var\\(--accent\\)\\],
+  html[data-theme="light"] .quotes-page button.bg-\\[\\#fd6401\\] {
+    color: #ffffff !important;
+  }
+
+  html[data-theme="light"] .quotes-page button.bg-gradient-to-r *,
+  html[data-theme="light"] .quotes-page button.bg-\\[var\\(--accent\\)\\] *,
+  html[data-theme="light"] .quotes-page button.bg-\\[\\#fd6401\\] * {
+    color: #ffffff !important;
+  }
+
+  /* CARDS E SUPERFÍCIES */
+  html[data-theme="light"] .quotes-page [class*="bg-white/"] {
+    background-color: var(--surface-light) !important;
+  }
+
+  html[data-theme="light"] .quotes-page [class*="bg-[#050914]"],
+  html[data-theme="light"] .quotes-page [class*="bg-[#071124]"],
+  html[data-theme="light"] .quotes-page [class*="bg-[#0a1120]"],
+  html[data-theme="light"] .quotes-page [class*="bg-[#0A1120]"] {
+    background-color: var(--surface) !important;
+  }
+
+  /* GRADIENTES DECORATIVOS */
+  html[data-theme="light"] .quotes-page .bg-gradient-to-br,
+  html[data-theme="light"] .quotes-page .bg-gradient-to-r {
+    background-image: none !important;
+    background-color: var(--surface) !important;
+  }
+
+  /* BORDAS */
+  html[data-theme="light"] .quotes-page [class*="border-white/"] {
+    border-color: var(--border) !important;
+  }
+
+  /* CAMPOS DE FORMULÁRIO */
+  html[data-theme="light"] .quotes-page input,
+  html[data-theme="light"] .quotes-page select,
+  html[data-theme="light"] .quotes-page textarea {
+    color: var(--foreground) !important;
+    background-color: var(--surface-light) !important;
+  }
+
+  html[data-theme="light"] .quotes-page input::placeholder,
+  html[data-theme="light"] .quotes-page textarea::placeholder {
+    color: var(--muted) !important;
+  }
+
+  html[data-theme="light"] .quotes-page option {
+    color: var(--foreground);
+    background-color: var(--surface);
+  }
+
+  /* TABELA */
+  html[data-theme="light"] .quotes-page tr:hover {
+    background-color: var(--surface-light);
+  }
+
+  /* MODAL */
+  html[data-theme="light"] .quotes-page [role="dialog"] {
+    color: var(--foreground);
+  }
+
+  /* BADGES DE STATUS */
+  html[data-theme="light"] .quotes-page [class*="bg-green-"],
+  html[data-theme="light"] .quotes-page [class*="bg-red-"],
+  html[data-theme="light"] .quotes-page [class*="bg-yellow-"],
+  html[data-theme="light"] .quotes-page [class*="bg-blue-"],
+  html[data-theme="light"] .quotes-page [class*="bg-orange-"] {
+    color: inherit;
+  }
+`}</style>
         <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.05)_1px,transparent_0)] bg-[size:32px_32px]" />
 
         <div className="relative flex min-h-[60vh] items-center justify-center">
@@ -858,7 +946,95 @@ const discountPercent = calcDiscountPercent();
   }
 
   return (
-    <div className="relative min-h-screen bg-[#050914]">
+    <div className="quotes-page relative min-h-screen bg-[var(--app-background)] text-[var(--app-foreground)]">
+      <style jsx global>{`
+  /* TEXTOS */
+  html[data-theme="light"] .quotes-page {
+    color: var(--app-foreground);
+  }
+
+  html[data-theme="light"] .quotes-page .text-white {
+    color: var(--app-foreground) !important;
+  }
+
+  html[data-theme="light"] .quotes-page [class*="text-white/"] {
+    color: var(--muted) !important;
+  }
+
+  /* PRESERVA TEXTO BRANCO NOS BOTÕES ESCUROS */
+  html[data-theme="light"] .quotes-page button.bg-gradient-to-r,
+  html[data-theme="light"] .quotes-page button.bg-\\[var\\(--accent\\)\\],
+  html[data-theme="light"] .quotes-page button.bg-\\[\\#fd6401\\] {
+    color: #ffffff !important;
+  }
+
+  html[data-theme="light"] .quotes-page button.bg-gradient-to-r *,
+  html[data-theme="light"] .quotes-page button.bg-\\[var\\(--accent\\)\\] *,
+  html[data-theme="light"] .quotes-page button.bg-\\[\\#fd6401\\] * {
+    color: #ffffff !important;
+  }
+
+  /* CARDS E SUPERFÍCIES */
+  html[data-theme="light"] .quotes-page [class*="bg-white/"] {
+    background-color: var(--surface-light) !important;
+  }
+
+  html[data-theme="light"] .quotes-page [class*="bg-[#050914]"],
+  html[data-theme="light"] .quotes-page [class*="bg-[#071124]"],
+  html[data-theme="light"] .quotes-page [class*="bg-[#0a1120]"],
+  html[data-theme="light"] .quotes-page [class*="bg-[#0A1120]"] {
+    background-color: var(--surface) !important;
+  }
+
+  /* GRADIENTES DECORATIVOS */
+  html[data-theme="light"] .quotes-page .bg-gradient-to-br,
+  html[data-theme="light"] .quotes-page .bg-gradient-to-r {
+    background-image: none !important;
+    background-color: var(--surface) !important;
+  }
+
+  /* BORDAS */
+  html[data-theme="light"] .quotes-page [class*="border-white/"] {
+    border-color: var(--border) !important;
+  }
+
+  /* CAMPOS DE FORMULÁRIO */
+  html[data-theme="light"] .quotes-page input,
+  html[data-theme="light"] .quotes-page select,
+  html[data-theme="light"] .quotes-page textarea {
+    color: var(--foreground) !important;
+    background-color: var(--surface-light) !important;
+  }
+
+  html[data-theme="light"] .quotes-page input::placeholder,
+  html[data-theme="light"] .quotes-page textarea::placeholder {
+    color: var(--muted) !important;
+  }
+
+  html[data-theme="light"] .quotes-page option {
+    color: var(--foreground);
+    background-color: var(--surface);
+  }
+
+  /* TABELA */
+  html[data-theme="light"] .quotes-page tr:hover {
+    background-color: var(--surface-light);
+  }
+
+  /* MODAL */
+  html[data-theme="light"] .quotes-page [role="dialog"] {
+    color: var(--foreground);
+  }
+
+  /* BADGES DE STATUS */
+  html[data-theme="light"] .quotes-page [class*="bg-green-"],
+  html[data-theme="light"] .quotes-page [class*="bg-red-"],
+  html[data-theme="light"] .quotes-page [class*="bg-yellow-"],
+  html[data-theme="light"] .quotes-page [class*="bg-blue-"],
+  html[data-theme="light"] .quotes-page [class*="bg-orange-"] {
+    color: inherit;
+  }
+`}</style>
       <div className="pointer-events-none fixed -bottom-40 -right-40 h-[500px] w-[500px] rounded-full bg-[#071124]/60 blur-[120px]" />
 
       <div className="pointer-events-none fixed -left-40 top-20 h-[420px] w-[420px] rounded-full bg-[rgba(var(--accent-rgb),0.025)] blur-[130px]" />

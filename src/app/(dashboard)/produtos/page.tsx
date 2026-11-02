@@ -387,11 +387,81 @@ function selectStockFilament(
     );
   }
   return (
-    <div className="relative min-h-screen bg-[#050914]">
+    <div className="products-page relative min-h-screen bg-[var(--app-background)] text-[var(--app-foreground)]">
+      <style jsx global>{`
+  html[data-theme="light"] .products-page {
+    color: var(--app-foreground);
+  }
+
+  /* Textos */
+  html[data-theme="light"] .products-page .text-white {
+    color: var(--app-foreground) !important;
+  }
+
+  html[data-theme="light"] .products-page [class*="text-white/"] {
+    color: var(--muted) !important;
+  }
+
+  /* Preserva textos brancos nos botões */
+  html[data-theme="light"] .products-page button.text-white,
+  html[data-theme="light"] .products-page button .text-white {
+    color: #ffffff !important;
+  }
+
+  /* Fundos dos cards e formulários */
+  html[data-theme="light"] .products-page [class*="bg-white/"] {
+    background-color: var(--surface-light) !important;
+  }
+
+  html[data-theme="light"] .products-page [class*="bg-[#050914]"],
+  html[data-theme="light"] .products-page [class*="bg-[#071124]"],
+  html[data-theme="light"] .products-page [class*="bg-[#0a1120]"],
+  html[data-theme="light"] .products-page [class*="bg-[#0A1120]"] {
+    background-color: var(--surface) !important;
+  }
+
+  html[data-theme="light"] .products-page .bg-gradient-to-br,
+  html[data-theme="light"] .products-page .bg-gradient-to-r {
+    background-image: none !important;
+    background-color: var(--surface) !important;
+  }
+
+  /* Bordas */
+  html[data-theme="light"] .products-page [class*="border-white/"] {
+    border-color: var(--border) !important;
+  }
+
+  /* Campos de formulário */
+  html[data-theme="light"] .products-page input,
+  html[data-theme="light"] .products-page select,
+  html[data-theme="light"] .products-page textarea {
+    color: var(--foreground);
+  }
+
+  html[data-theme="light"] .products-page input::placeholder {
+    color: var(--muted);
+  }
+
+  html[data-theme="light"] .products-page option {
+    background-color: var(--surface);
+    color: var(--foreground);
+  }
+
+  /* Hover das linhas */
+  html[data-theme="light"] .products-page tr:hover {
+    background-color: var(--surface-light);
+  }
+
+  /* Links e ações */
+  html[data-theme="light"] .products-page a:hover {
+    filter: brightness(0.9);
+  }
+`}</style>
+      
       {/* Background */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute -right-40 -top-40 h-[520px] w-[520px] rounded-full bg-[rgba(var(--accent-rgb),0.045)] blur-[140px]" />
-        <div className="absolute -bottom-48 -left-40 h-[520px] w-[520px] rounded-full bg-[#071124]/80 blur-[140px]" />
+        {/* <div className="absolute -bottom-48 -left-40 h-[520px] w-[520px] rounded-full bg-[#071124]/80 blur-[140px]" /> */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.035)_1px,transparent_0)] bg-[size:32px_32px]" />
       </div>
       <div className="relative z-10">

@@ -1971,7 +1971,124 @@ export default function RelatoriosPage() {
   }
 
   return (
-    <div className="min-h-full bg-[#020617] text-white">
+    <div className="relatorios-page min-h-full bg-[var(--app-background)] text-[var(--app-foreground)]">
+      <style jsx global>{`
+  /* Textos principais */
+  html[data-theme="light"] .relatorios-page .text-white {
+    color: var(--app-foreground) !important;
+  }
+
+  html[data-theme="light"] .relatorios-page [class*="text-slate-"] {
+    color: var(--muted) !important;
+  }
+
+  /* Preserva cores semânticas e de destaque */
+  html[data-theme="light"] .relatorios-page .text-orange-300,
+  html[data-theme="light"] .relatorios-page .text-orange-400 {
+    color: #d95b0b !important;
+  }
+
+  html[data-theme="light"] .relatorios-page .text-emerald-300,
+  html[data-theme="light"] .relatorios-page .text-emerald-400 {
+    color: #059669 !important;
+  }
+
+  html[data-theme="light"] .relatorios-page .text-blue-300,
+  html[data-theme="light"] .relatorios-page .text-blue-400 {
+    color: #2563eb !important;
+  }
+
+  html[data-theme="light"] .relatorios-page .text-purple-400 {
+    color: #9333ea !important;
+  }
+
+  html[data-theme="light"] .relatorios-page .text-cyan-400 {
+    color: #0891b2 !important;
+  }
+
+  html[data-theme="light"] .relatorios-page .text-yellow-300 {
+    color: #b45309 !important;
+  }
+
+  html[data-theme="light"] .relatorios-page .text-green-300 {
+    color: #059669 !important;
+  }
+
+  html[data-theme="light"] .relatorios-page .text-red-300 {
+    color: #dc2626 !important;
+  }
+
+  /* Cards e superfícies */
+  html[data-theme="light"] .relatorios-page [class*="bg-[#0a1120]"],
+  html[data-theme="light"] .relatorios-page [class*="bg-[#020617]"],
+  html[data-theme="light"] .relatorios-page [class*="bg-[#111827]"],
+  html[data-theme="light"] .relatorios-page [class*="bg-[#0d1422]"] {
+    background-color: var(--surface) !important;
+  }
+
+  html[data-theme="light"] .relatorios-page [class*="bg-white/"] {
+    background-color: var(--surface-light) !important;
+  }
+
+  /* Bordas e divisores */
+  html[data-theme="light"] .relatorios-page [class*="border-white/"] {
+    border-color: var(--border) !important;
+  }
+
+  html[data-theme="light"] .relatorios-page [class*="divide-white/"] > * + * {
+    border-color: var(--border) !important;
+  }
+
+  /* Hover das linhas e cards */
+  html[data-theme="light"] .relatorios-page [class*="hover:bg-white/"]:hover {
+    background-color: var(--surface-light) !important;
+  }
+
+  html[data-theme="light"] .relatorios-page [class*="hover:border-white/"]:hover {
+    border-color: var(--border) !important;
+  }
+
+  /* Select de período */
+  html[data-theme="light"] .relatorios-page select {
+    background-color: var(--surface) !important;
+    border-color: var(--border) !important;
+    color: var(--app-foreground) !important;
+  }
+
+  html[data-theme="light"] .relatorios-page option {
+    background-color: var(--surface) !important;
+    color: var(--app-foreground) !important;
+  }
+
+  /* Menu de exportação */
+  html[data-theme="light"] .relatorios-page .relatorios-export-menu {
+    background-color: var(--surface) !important;
+    border-color: var(--border) !important;
+  }
+
+  /* Botões de exportação */
+  html[data-theme="light"] .relatorios-page button {
+    transition: background-color 150ms ease, border-color 150ms ease;
+  }
+
+  /* Status dos pedidos */
+  html[data-theme="light"] .relatorios-page .text-blue-300 {
+    color: #2563eb !important;
+  }
+
+  html[data-theme="light"] .relatorios-page .text-orange-300 {
+    color: #d95b0b !important;
+  }
+
+  /* Fundo dos gráficos e barras */
+  html[data-theme="light"] .relatorios-page [class*="bg-gradient-to-br"] {
+    background-image: linear-gradient(
+      to bottom right,
+      var(--surface),
+      var(--surface-light)
+    ) !important;
+  }
+`}</style>
       <div className="mx-auto max-w-[1600px] space-y-6 p-4 md:p-6 lg:p-8">
         {/* Header */}
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
@@ -2024,7 +2141,7 @@ export default function RelatoriosPage() {
                     className="fixed inset-0 z-30 cursor-default"
                   />
 
-                  <div className="absolute right-0 z-40 mt-2 w-72 overflow-hidden rounded-2xl border border-white/10 bg-[#0a1120] p-2 shadow-2xl shadow-black/40">
+                  <div className="relatorios-export-menu absolute right-0 z-40 mt-2 w-72 overflow-hidden rounded-2xl border border-white/10 bg-[#0a1120] p-2 shadow-2xl shadow-black/40">
                     <div className="px-3 py-2">
                       <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
                         Exportar como PDF

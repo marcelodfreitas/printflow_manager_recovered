@@ -98,8 +98,74 @@ function formatWhatsapp(value: string) {
 
   return (
   <>
-        <div className="mx-auto max-w-4xl space-y-6 p-6 pt-8">
-      <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
+        <div className="profile-page mx-auto max-w-4xl space-y-6 p-6 pt-8">
+          <style jsx global>{`
+  /* Textos */
+  html[data-theme="light"] .profile-page .text-white {
+    color: var(--app-foreground) !important;
+  }
+
+  html[data-theme="light"] .profile-page [class*="text-white/"] {
+    color: var(--muted) !important;
+  }
+
+  html[data-theme="light"] .profile-page .text-green-400 {
+    color: #059669 !important;
+  }
+
+  /* Cards */
+  html[data-theme="light"] .profile-page [class*="bg-white/"] {
+    background-color: var(--surface) !important;
+  }
+
+  /* Bordas */
+  html[data-theme="light"] .profile-page [class*="border-white/"] {
+    border-color: var(--border) !important;
+  }
+
+  /* Fundo do avatar */
+  html[data-theme="light"] .profile-page [class*="bg-gradient-to-br"] {
+    background-image: linear-gradient(
+      to bottom right,
+      var(--surface-light),
+      var(--surface)
+    ) !important;
+  }
+
+  /* Campos */
+  html[data-theme="light"] .profile-page input,
+  html[data-theme="light"] .profile-page textarea,
+  html[data-theme="light"] .profile-page select {
+    background-color: var(--surface-light) !important;
+    border-color: var(--border) !important;
+    color: var(--app-foreground) !important;
+  }
+
+  html[data-theme="light"] .profile-page input::placeholder {
+    color: var(--muted) !important;
+    opacity: 0.7;
+  }
+
+  /* Botão de alterar avatar */
+  html[data-theme="light"] .profile-page label.accent-bg {
+    color: #ffffff !important;
+  }
+
+  html[data-theme="light"] .profile-page label.accent-bg svg {
+    color: #ffffff !important;
+  }
+
+  /* Botão salvar */
+  html[data-theme="light"] .profile-page button.accent-bg {
+    color: #ffffff !important;
+  }
+
+  html[data-theme="light"] .profile-page button.accent-bg * {
+    color: #ffffff !important;
+  }
+`}</style>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
         {/* CARD AVATAR */}
         <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
           <div className="flex flex-col items-center text-center">

@@ -138,10 +138,10 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-[70vh] items-center justify-center bg-[#050914]">
+      <div className="flex min-h-[70vh] items-center justify-center bg-[var(--app-background)]">
         <div className="flex flex-col items-center gap-4">
-          <div className="h-10 w-10 animate-spin rounded-full border-2 border-white/10 border-t-[var(--accent)]" />
-          <span className="text-sm text-white/40">
+          <div className="h-10 w-10 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--accent)]" />
+          <span className="text-sm text-[var(--muted)]">
             Carregando seu dashboard...
           </span>
         </div>
@@ -275,7 +275,7 @@ const revenueData = currentMonthOrders
   }
 
   return (
-    <div className="relative min-h-full overflow-hidden bg-[#050914]">
+    <div className="relative min-h-full overflow-hidden bg-[var(--app-background)]">
       {/* Ambient background */}
 
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -288,27 +288,27 @@ const revenueData = currentMonthOrders
             PRO / TRIAL BANNER
         ================================================================= */}
 
-        <section className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-r from-[#071124] via-[#0a152b] to-[#071124]">
+        <section className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-gradient-to-r from-[var(--surface)] via-[var(--surface-light)] to-[var(--surface)]">
           <div className="absolute -right-24 -top-24 h-64 w-64 rounded-full bg-orange-500/[0.10] blur-3xl" />
 
           <div className="relative flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
             <div className="flex items-center gap-4">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--accent)] shadow-[0_0_30px_rgba(var(--accent-rgb),0.25)]">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--accent)] text-white shadow-[0_0_30px_rgba(var(--accent-rgb),0.25)]">
                 <Crown className="h-5 w-5 text-white" />
               </div>
 
               <div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm font-semibold text-white">
+                  <span className="text-sm font-semibold text-[var(--foreground)]">
                     Plano Gratuito
                   </span>
 
-                  <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-white/50">
+                  <span className="rounded-full border border-[var(--border)] bg-[var(--surface-light)] px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-[var(--muted)]">
                     PrintFlow
                   </span>
                 </div>
 
-                <p className="mt-1 text-xs text-white/40 sm:text-sm">
+                <p className="mt-1 text-xs text-[var(--muted)] sm:text-sm">
                   Desbloqueie recursos avançados e leve sua operação para o
                   próximo nível.
                 </p>
@@ -333,45 +333,45 @@ const revenueData = currentMonthOrders
         <section className="grid gap-5 lg:grid-cols-[minmax(0,7fr)_minmax(320px,3fr)]">
           {/* Left */}
 
-          <Card className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-[#071124] via-[#09162f] to-[#050914] shadow-2xl">
+          <Card className="relative overflow-hidden rounded-3xl border border-[var(--border)] bg-gradient-to-br from-[var(--surface)] via-[var(--surface-light)] to-[var(--app-background)] shadow-2xl">
             <div className="pointer-events-none absolute -right-32 -top-32 h-80 w-80 rounded-full bg-orange-500/[0.08] blur-3xl" />
             <div className="pointer-events-none absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-blue-600/[0.06] blur-3xl" />
 
             <CardContent className="relative p-6 sm:p-8">
               <div className="flex flex-col justify-between gap-8 xl:flex-row">
                 <div>
-                  <p className="text-sm font-medium text-white/40">
+                  <p className="text-sm font-medium text-[var(--muted)]">
                     {formatDate(currentDate)}
                   </p>
 
-                  <h1 className="mt-2 text-3xl font-bold tracking-tight text-white sm:text-4xl">
+                  <h1 className="mt-2 text-3xl font-bold tracking-tight text-[var(--foreground)] sm:text-4xl">
                     Olá, {userName}
                   </h1>
 
                   <div className="mt-2 flex items-center gap-2">
                     <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />
-                    <span className="text-sm text-white/45">
+                    <span className="text-sm text-[var(--muted)]">
                       Plano Gratuito
                     </span>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 sm:min-w-[360px]">
-                  <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                    <div className="flex items-center gap-2 text-white/40">
+                  <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+                    <div className="flex items-center gap-2 text-[var(--muted)]">
                       <DollarSign className="h-4 w-4 text-[var(--accent)]" />
                       <span className="text-xs font-medium">
                         Receita do mês
                       </span>
                     </div>
 
-                    <p className="mt-3 text-xl font-bold text-white sm:text-2xl">
+                    <p className="mt-3 text-xl font-bold text-[var(--foreground)] sm:text-2xl">
                       {formatCurrency(monthlyRevenue)}
                     </p>
                   </div>
 
-                  <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                    <div className="flex items-center gap-2 text-white/40">
+                  <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+                    <div className="flex items-center gap-2 text-[var(--muted)]">
                       <WalletCards className="h-4 w-4 text-[var(--accent)]" />
                       <span className="text-xs font-medium">
                         Lucro do mês
@@ -391,30 +391,30 @@ const revenueData = currentMonthOrders
                 </div>
               </div>
 
-              <div className="mt-8 grid grid-cols-2 gap-3 border-t border-white/10 pt-6 sm:grid-cols-3">
+              <div className="mt-8 grid grid-cols-2 gap-3 border-t border-[var(--border)] pt-6 sm:grid-cols-3">
                 <div>
-                  <p className="text-xs text-white/35">
+                  <p className="text-xs text-[var(--muted)]">
                     Pedidos aguardando
                   </p>
-                  <p className="mt-1 text-lg font-semibold text-white">
+                  <p className="mt-1 text-lg font-semibold text-[var(--foreground)]">
                     {pendingOrders}
                   </p>
                 </div>
 
                 <div>
-                  <p className="text-xs text-white/35">
+                  <p className="text-xs text-[var(--muted)]">
                     Impressoras ativas
                   </p>
-                  <p className="mt-1 text-lg font-semibold text-white">
+                  <p className="mt-1 text-lg font-semibold text-[var(--foreground)]">
                     {activePrinters}/{printers.length}
                   </p>
                 </div>
 
                 <div className="col-span-2 sm:col-span-1">
-                  <p className="text-xs text-white/35">
+                  <p className="text-xs text-[var(--muted)]">
                     Estoque de filamento
                   </p>
-                  <p className="mt-1 text-lg font-semibold text-white">
+                  <p className="mt-1 text-lg font-semibold text-[var(--foreground)]">
                     {formatWeight(filamentStock)}
                   </p>
                 </div>
@@ -424,7 +424,7 @@ const revenueData = currentMonthOrders
 
           {/* Primary printer */}
 
-          <Card className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] shadow-2xl backdrop-blur-xl">
+          <Card className="relative overflow-hidden rounded-3xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl backdrop-blur-xl">
             {primaryPrinter ? (
               <>
                 <div className="absolute right-0 top-0 h-40 w-40 rounded-full bg-orange-500/[0.08] blur-3xl" />
@@ -432,11 +432,11 @@ const revenueData = currentMonthOrders
                 <CardContent className="relative flex h-full flex-col p-5">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/30">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
                         Impressora principal
                       </p>
 
-                      <h2 className="mt-1 text-lg font-semibold text-white">
+                      <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">
                         {primaryPrinter.name}
                       </h2>
                     </div>
@@ -446,7 +446,7 @@ const revenueData = currentMonthOrders
                     </div>
                   </div>
 
-                  <div className="mt-4 flex min-h-[150px] items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-[#020617]/40">
+                  <div className="mt-4 flex min-h-[150px] items-center justify-center overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface-light)]">
                     {primaryPrinter.imageUrl ? (
                       <img
                         src={primaryPrinter.imageUrl}
@@ -454,43 +454,43 @@ const revenueData = currentMonthOrders
                         className="h-full max-h-[170px] w-full object-contain p-5"
                       />
                     ) : (
-                      <Printer className="h-16 w-16 text-white/20" />
+                      <Printer className="h-16 w-16 text-[var(--muted)]" />
                     )}
                   </div>
 
                   <div className="mt-4">
-                    <p className="text-sm font-medium text-white">
+                    <p className="text-sm font-medium text-[var(--foreground)]">
                       {primaryPrinter.manufacturer}
                     </p>
 
-                    <p className="text-xs text-white/35">
+                    <p className="text-xs text-[var(--muted)]">
                       {primaryPrinter.model}
                     </p>
                   </div>
 
                   <div className="mt-4 grid grid-cols-2 gap-2">
-                    <div className="rounded-xl border border-white/10 bg-white/[0.025] p-3">
-                      <div className="flex items-center gap-1.5 text-white/35">
+                    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3">
+                      <div className="flex items-center gap-1.5 text-[var(--muted)]">
                         <Clock3 className="h-3.5 w-3.5" />
                         <span className="text-[10px]">
                           Horas utilizadas
                         </span>
                       </div>
 
-                      <p className="mt-1.5 text-sm font-semibold text-white">
+                      <p className="mt-1.5 text-sm font-semibold text-[var(--foreground)]">
                         {formatHours(primaryPrinterHours)}
                       </p>
                     </div>
 
-                    <div className="rounded-xl border border-white/10 bg-white/[0.025] p-3">
-                      <div className="flex items-center gap-1.5 text-white/35">
+                    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3">
+                      <div className="flex items-center gap-1.5 text-[var(--muted)]">
                         <DollarSign className="h-3.5 w-3.5" />
                         <span className="text-[10px]">
                           Investimento
                         </span>
                       </div>
 
-                      <p className="mt-1.5 text-sm font-semibold text-white">
+                      <p className="mt-1.5 text-sm font-semibold text-[var(--foreground)]">
                         {formatCurrency(investment)}
                       </p>
                     </div>
@@ -499,11 +499,11 @@ const revenueData = currentMonthOrders
                   <div className="mt-4">
                     <div className="flex items-end justify-between">
                       <div>
-                        <p className="text-[11px] text-white/35">
+                        <p className="text-[11px] text-[var(--muted)]">
                           Investimento recuperado
                         </p>
 
-                        <p className="mt-1 text-lg font-bold text-white">
+                        <p className="mt-1 text-lg font-bold text-[var(--foreground)]">
                           {formatCurrency(primaryPrinterRecovered)}
                         </p>
                       </div>
@@ -513,14 +513,14 @@ const revenueData = currentMonthOrders
                       </span>
                     </div>
 
-                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
+                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-[var(--border)]">
                       <div
                         className="h-full rounded-full bg-[var(--accent)] transition-all duration-700"
                         style={{ width: `${recoveryPercent}%` }}
                       />
                     </div>
 
-                    <p className="mt-2 text-[10px] text-white/30">
+                    <p className="mt-2 text-[10px] text-[var(--muted)]">
                       {investment > 0
                         ? remainingInvestment > 0
                           ? `${formatCurrency(
@@ -534,15 +534,15 @@ const revenueData = currentMonthOrders
               </>
             ) : (
               <CardContent className="flex h-full min-h-[420px] flex-col items-center justify-center p-6 text-center">
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-white/5">
-                  <Printer className="h-7 w-7 text-white/25" />
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--surface-light)]">
+                  <Printer className="h-7 w-7 text-[var(--muted)]" />
                 </div>
 
-                <h2 className="mt-4 text-lg font-semibold text-white">
+                <h2 className="mt-4 text-lg font-semibold text-[var(--foreground)]">
                   Nenhuma impressora principal
                 </h2>
 
-                <p className="mt-2 max-w-[260px] text-sm leading-6 text-white/35">
+                <p className="mt-2 max-w-[260px] text-sm leading-6 text-[var(--muted)]">
                   Defina uma impressora como principal para acompanhar o
                   investimento e a recuperação diretamente no Dashboard.
                 </p>
@@ -550,7 +550,7 @@ const revenueData = currentMonthOrders
                 <button
                   type="button"
                   onClick={() => router.push("/impressoras")}
-                  className="mt-5 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white transition hover:border-[var(--accent)] hover:bg-white/10"
+                  className="mt-5 rounded-xl border border-[var(--border)] bg-[var(--surface-light)] px-4 py-2 text-sm font-medium text-[var(--foreground)] transition hover:border-[var(--accent)] hover:bg-[var(--border)]"
                 >
                   Configurar impressora
                 </button>
@@ -565,25 +565,25 @@ const revenueData = currentMonthOrders
 
         {/* <section
           onClick={handle3MFUpload}
-          className="group relative cursor-pointer overflow-hidden rounded-3xl border border-dashed border-white/15 bg-white/[0.025] transition-all duration-300 hover:border-[var(--accent)] hover:bg-white/[0.04]"
+          className="group relative cursor-pointer overflow-hidden rounded-3xl border border-dashed border-[var(--border)] bg-[var(--surface)] transition-all duration-300 hover:border-[var(--accent)] hover:bg-[var(--surface-light)]"
         >
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-orange-500/[0.03] via-transparent to-blue-500/[0.03] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
 
           <div className="relative flex flex-col items-center justify-center px-6 py-9 text-center sm:py-11">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-white/5 transition-transform duration-300 group-hover:scale-105 group-hover:border-[var(--accent)]">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--surface-light)] transition-transform duration-300 group-hover:scale-105 group-hover:border-[var(--accent)]">
               <UploadCloud className="h-6 w-6 text-[var(--accent)]" />
             </div>
 
-            <h2 className="mt-4 text-base font-semibold text-white">
+            <h2 className="mt-4 text-base font-semibold text-[var(--foreground)]">
               Envie seu arquivo .3MF
             </h2>
 
-            <p className="mt-1 max-w-lg text-sm text-white/35">
+            <p className="mt-1 max-w-lg text-sm text-[var(--muted)]">
               Arraste seu projeto para cá ou clique para abrir a calculadora
               e descobrir o custo e o preço ideal de impressão.
             </p>
 
-            <div className="mt-4 inline-flex items-center gap-2 text-xs font-medium text-white/45 transition group-hover:text-white/70">
+            <div className="mt-4 inline-flex items-center gap-2 text-xs font-medium text-[var(--muted)] transition group-hover:text-[var(--foreground)]/70">
               <Calculator className="h-3.5 w-3.5" />
               Abrir calculadora
               <ArrowUpRight className="h-3.5 w-3.5" />
@@ -596,46 +596,46 @@ const revenueData = currentMonthOrders
         ================================================================= */}
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-4">
-            <div className="flex items-center gap-2 text-white/35">
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+            <div className="flex items-center gap-2 text-[var(--muted)]">
               <Users className="h-4 w-4 text-[var(--accent)]" />
               <span className="text-xs">Clientes</span>
             </div>
 
-            <p className="mt-2 text-xl font-bold text-white">
+            <p className="mt-2 text-xl font-bold text-[var(--foreground)]">
               {clients.length}
             </p>
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-4">
-            <div className="flex items-center gap-2 text-white/35">
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+            <div className="flex items-center gap-2 text-[var(--muted)]">
               <Printer className="h-4 w-4 text-[var(--accent)]" />
               <span className="text-xs">Impressoras</span>
             </div>
 
-            <p className="mt-2 text-xl font-bold text-white">
+            <p className="mt-2 text-xl font-bold text-[var(--foreground)]">
               {activePrinters}/{printers.length}
             </p>
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-4">
-            <div className="flex items-center gap-2 text-white/35">
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+            <div className="flex items-center gap-2 text-[var(--muted)]">
               <Package className="h-4 w-4 text-[var(--accent)]" />
               <span className="text-xs">Pedidos</span>
             </div>
 
-            <p className="mt-2 text-xl font-bold text-white">
+            <p className="mt-2 text-xl font-bold text-[var(--foreground)]">
               {pendingOrders}
             </p>
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-4">
-            <div className="flex items-center gap-2 text-white/35">
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+            <div className="flex items-center gap-2 text-[var(--muted)]">
               <CalendarDays className="h-4 w-4 text-[var(--accent)]" />
               <span className="text-xs">Pedidos no mês</span>
             </div>
 
-            <p className="mt-2 text-xl font-bold text-white">
+            <p className="mt-2 text-xl font-bold text-[var(--foreground)]">
               {currentMonthOrders.length}
             </p>
           </div>
@@ -645,14 +645,14 @@ const revenueData = currentMonthOrders
             REVENUE CHART
         ================================================================= */}
 
-        <Card className="rounded-3xl border border-white/10 bg-white/[0.03] shadow-2xl backdrop-blur-xl">
-          <CardHeader className="border-b border-white/10 px-5 py-5 sm:px-6">
+        <Card className="rounded-3xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl backdrop-blur-xl">
+          <CardHeader className="border-b border-[var(--border)] px-5 py-5 sm:px-6">
             <div>
-              <h2 className="text-lg font-semibold text-white">
+              <h2 className="text-lg font-semibold text-[var(--foreground)]">
                 Receita do mês
               </h2>
 
-              <p className="mt-1 text-sm text-white/35">
+              <p className="mt-1 text-sm text-[var(--muted)]">
                 Faturamento dos pedidos entregues neste mês
               </p>
             </div>
@@ -663,9 +663,9 @@ const revenueData = currentMonthOrders
               <RevenueChart data={revenueData} />
             ) : (
               <div className="flex h-[280px] flex-col items-center justify-center text-center">
-                <DollarSign className="h-8 w-8 text-white/10" />
+                <DollarSign className="h-8 w-8 text-[var(--foreground)]/10" />
 
-                <p className="mt-3 text-sm text-white/30">
+                <p className="mt-3 text-sm text-[var(--muted)]">
                   Ainda não existem dados de receita neste mês.
                 </p>
               </div>
@@ -678,14 +678,14 @@ const revenueData = currentMonthOrders
         ================================================================= */}
 
         <div className="grid gap-4 sm:gap-5 lg:grid-cols-[2fr_1fr]">
-          <Card className="rounded-3xl border border-white/10 bg-white/[0.03] shadow-2xl backdrop-blur-xl">
-            <CardHeader className="flex items-center justify-between border-b border-white/10 px-5 py-5 sm:px-6">
+          <Card className="rounded-3xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl backdrop-blur-xl">
+            <CardHeader className="flex items-center justify-between border-b border-[var(--border)] px-5 py-5 sm:px-6">
               <div>
-                <h2 className="text-lg font-semibold text-white">
+                <h2 className="text-lg font-semibold text-[var(--foreground)]">
                   Pedidos recentes
                 </h2>
 
-                <p className="mt-1 text-sm text-white/35">
+                <p className="mt-1 text-sm text-[var(--muted)]">
                   Últimos pedidos registrados no sistema
                 </p>
               </div>
@@ -693,14 +693,14 @@ const revenueData = currentMonthOrders
               <button
                 type="button"
                 onClick={() => router.push("/pedidos")}
-                className="hidden items-center gap-1 text-xs font-medium text-white/40 transition hover:text-white sm:flex"
+                className="hidden items-center gap-1 text-xs font-medium text-[var(--muted)] transition hover:text-[var(--foreground)] sm:flex"
               >
                 Ver todos
                 <ArrowUpRight className="h-3.5 w-3.5" />
               </button>
             </CardHeader>
 
-            <CardContent className="divide-y divide-white/5 px-4 sm:px-6">
+            <CardContent className="divide-y divide-[var(--border)] px-4 sm:px-6">
               {recentOrders.length > 0 ? (
                 recentOrders.map((order) => (
                   <div
@@ -708,17 +708,17 @@ const revenueData = currentMonthOrders
                     className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div className="min-w-0">
-                      <h3 className="font-medium text-white">
+                      <h3 className="font-medium text-[var(--foreground)]">
                         {order.clientName}
                       </h3>
 
-                      <p className="truncate text-sm text-white/35">
+                      <p className="truncate text-sm text-[var(--muted)]">
                         {order.printerName} • {order.filamentName}
                       </p>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-3 sm:gap-5">
-                      <span className="font-semibold text-white">
+                      <span className="font-semibold text-[var(--foreground)]">
                         {formatCurrency(order.price)}
                       </span>
 
@@ -740,31 +740,31 @@ const revenueData = currentMonthOrders
                   </div>
                 ))
               ) : (
-                <div className="flex h-40 items-center justify-center text-sm text-white/30">
+                <div className="flex h-40 items-center justify-center text-sm text-[var(--muted)]">
                   Nenhum pedido registrado.
                 </div>
               )}
             </CardContent>
           </Card>
 
-          <Card className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#071124] to-[#0d1a35] shadow-2xl">
+          <Card className="rounded-3xl border border-[var(--border)] bg-gradient-to-br from-[var(--surface)] to-[var(--surface-light)] shadow-2xl">
             <CardContent className="flex h-full min-h-[260px] flex-col items-center justify-center p-6 text-center sm:p-8">
-              <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-[var(--accent)] shadow-[0_15px_45px_rgba(var(--accent-rgb),0.2)] ring-1 ring-[var(--accent)] sm:h-24 sm:w-24">
+              <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-[var(--accent)] text-white shadow-[0_15px_45px_rgba(var(--accent-rgb),0.2)] ring-1 ring-[var(--accent)] sm:h-24 sm:w-24">
                 <Package className="h-10 w-10 text-white sm:h-12 sm:w-12" />
               </div>
 
-              <h2 className="mt-5 text-3xl font-bold tracking-tight text-white sm:mt-6">
+              <h2 className="mt-5 text-3xl font-bold tracking-tight text-[var(--foreground)] sm:mt-6">
                 {formatWeight(filamentStock)}
               </h2>
 
-              <p className="mt-2 max-w-[220px] text-sm text-white/40">
+              <p className="mt-2 max-w-[220px] text-sm text-[var(--muted)]">
                 Filamento disponível em estoque
               </p>
 
               <button
                 type="button"
                 onClick={() => router.push("/estoque")}
-                className="mt-5 inline-flex items-center gap-1.5 text-xs font-medium text-white/45 transition hover:text-white"
+                className="mt-5 inline-flex items-center gap-1.5 text-xs font-medium text-[var(--muted)] transition hover:text-[var(--foreground)]"
               >
                 Ver estoque
                 <ArrowUpRight className="h-3.5 w-3.5" />

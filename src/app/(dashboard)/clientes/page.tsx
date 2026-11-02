@@ -183,7 +183,78 @@ export default function ClientPage() {
   }
 
   return (
-    <div className="relative min-h-screen bg-[#050914]">
+    <div className="clients-page relative min-h-screen bg-[var(--app-background)] text-[var(--app-foreground)]">
+      <style jsx global>{`
+  html[data-theme="light"] .clients-page {
+    color: var(--app-foreground);
+  }
+
+  /* Textos */
+  html[data-theme="light"] .clients-page .text-white {
+    color: var(--app-foreground) !important;
+  }
+
+  html[data-theme="light"] .clients-page [class*="text-white/"] {
+    color: var(--muted) !important;
+  }
+
+  /* Preserva textos brancos em botões escuros */
+  html[data-theme="light"] .clients-page button.text-white {
+    color: #ffffff !important;
+  }
+
+  /* Superfícies */
+  html[data-theme="light"] .clients-page [class*="bg-white/"] {
+    background-color: var(--surface-light) !important;
+  }
+
+  html[data-theme="light"] .clients-page [class*="bg-[#050914]"],
+  html[data-theme="light"] .clients-page [class*="bg-[#071124]"],
+  html[data-theme="light"] .clients-page [class*="bg-[#0a1120]"],
+  html[data-theme="light"] .clients-page [class*="bg-[#0A1120]"] {
+    background-color: var(--surface) !important;
+  }
+
+  /* Gradientes escuros */
+  html[data-theme="light"] .clients-page .bg-gradient-to-br,
+  html[data-theme="light"] .clients-page .bg-gradient-to-r {
+    background-image: none !important;
+    background-color: var(--surface) !important;
+  }
+
+  /* Bordas */
+  html[data-theme="light"] .clients-page [class*="border-white/"] {
+    border-color: var(--border) !important;
+  }
+
+  /* Campos */
+  html[data-theme="light"] .clients-page input,
+  html[data-theme="light"] .clients-page select,
+  html[data-theme="light"] .clients-page textarea {
+    color: var(--foreground);
+  }
+
+  html[data-theme="light"] .clients-page input::placeholder,
+  html[data-theme="light"] .clients-page textarea::placeholder {
+    color: var(--muted);
+  }
+
+  html[data-theme="light"] .clients-page option {
+    background-color: var(--surface);
+    color: var(--foreground);
+  }
+
+  /* Tabelas */
+  html[data-theme="light"] .clients-page tr:hover {
+    background-color: var(--surface-light);
+  }
+
+  /* Modal */
+  html[data-theme="light"] .clients-page [role="dialog"] {
+    color: var(--foreground);
+  }
+`}</style>
+      
       {/* BACKGROUND */}
       <div className="pointer-events-none fixed -bottom-40 -right-40 h-[500px] w-[500px] rounded-full bg-[#071124]/60 blur-[120px]" />
 
@@ -216,20 +287,18 @@ export default function ClientPage() {
             <Button
               onClick={openCreate}
               className="
-                h-10
-                bg-gradient-to-r
-                from-[#071124]
-                to-[#0d1a35]
-                text-white
-                shadow-lg
-                shadow-black/30
-                ring-1
-                ring-white/10
-                transition-all
-                duration-300
-                hover:shadow-[0_8px_30px_rgba(var(--accent-rgb),0.20)]
-                hover:ring-[rgba(var(--accent-rgb),0.30)]
-              "
+  h-10
+  bg-[#0d1a35]
+  text-white
+  shadow-lg
+  shadow-black/10
+  ring-1
+  ring-white/10
+  transition-all
+  duration-300
+  hover:bg-[#142447]
+  hover:ring-[rgba(var(--accent-rgb),0.35)]
+"
             >
               <Plus className="h-4 w-4" />
               Novo Cliente

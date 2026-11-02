@@ -27,8 +27,65 @@ export default function AdminPage() {
 
   if (!admin) {
     return (
-      <div className="relative min-h-screen bg-[#050914]">
-        <div className="pointer-events-none fixed -bottom-40 -right-40 h-[500px] w-[500px] rounded-full bg-[#071124]/60 blur-[120px]" />
+<div className="admin-page relative min-h-screen bg-[var(--app-background)] text-[var(--app-foreground)]"> 
+  
+  <style jsx global>{`
+  /* Textos */
+  html[data-theme="light"] .admin-page {
+    color: var(--app-foreground);
+  }
+
+  html[data-theme="light"] .admin-page .text-white {
+    color: var(--app-foreground) !important;
+  }
+
+  html[data-theme="light"] .admin-page [class*="text-white/"] {
+    color: var(--muted) !important;
+  }
+
+  /* Mantém cores semânticas */
+  html[data-theme="light"] .admin-page .text-red-400 {
+    color: #dc2626 !important;
+  }
+
+  /* Cards e superfícies */
+  html[data-theme="light"] .admin-page [class*="bg-white/"] {
+    background-color: var(--surface) !important;
+  }
+
+  html[data-theme="light"] .admin-page [class*="bg-[#050914]"] {
+    background-color: var(--app-background) !important;
+  }
+
+  /* Bordas */
+  html[data-theme="light"] .admin-page [class*="border-white/"] {
+    border-color: var(--border) !important;
+  }
+
+  /* Campo de pesquisa */
+  html[data-theme="light"] .admin-page input {
+    background-color: var(--surface-light) !important;
+    border-color: var(--border) !important;
+    color: var(--app-foreground) !important;
+  }
+
+  html[data-theme="light"] .admin-page input::placeholder {
+    color: var(--muted) !important;
+    opacity: 0.7;
+  }
+
+  /* Hover da tabela */
+  html[data-theme="light"] .admin-page tr:hover {
+    background-color: var(--surface-light) !important;
+  }
+
+  /* Remove sombras escuras excessivas */
+  html[data-theme="light"] .admin-page [class*="shadow-black/"] {
+    --tw-shadow-color: transparent !important;
+  }
+`}</style>
+
+       <div className="pointer-events-none fixed -bottom-40 -right-40 h-[500px] w-[500px] rounded-full bg-[#071124]/60 blur-[120px]" />
         <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.06)_1px,transparent_0)] bg-[size:32px_32px]" />
 
         <div className="relative flex min-h-[60vh] flex-col items-center justify-center px-4 text-center">
@@ -53,7 +110,63 @@ export default function AdminPage() {
   );
 
   return (
-    <div className="relative min-h-screen bg-[#050914]">
+    <div className="admin-page relative min-h-screen bg-[var(--app-background)] text-[var(--app-foreground)]">
+<style jsx global>{`
+  /* Textos */
+  html[data-theme="light"] .admin-page {
+    color: var(--app-foreground);
+  }
+
+  html[data-theme="light"] .admin-page .text-white {
+    color: var(--app-foreground) !important;
+  }
+
+  html[data-theme="light"] .admin-page [class*="text-white/"] {
+    color: var(--muted) !important;
+  }
+
+  /* Mantém cores semânticas */
+  html[data-theme="light"] .admin-page .text-red-400 {
+    color: #dc2626 !important;
+  }
+
+  /* Cards e superfícies */
+  html[data-theme="light"] .admin-page [class*="bg-white/"] {
+    background-color: var(--surface) !important;
+  }
+
+  html[data-theme="light"] .admin-page [class*="bg-[#050914]"] {
+    background-color: var(--app-background) !important;
+  }
+
+  /* Bordas */
+  html[data-theme="light"] .admin-page [class*="border-white/"] {
+    border-color: var(--border) !important;
+  }
+
+  /* Campo de pesquisa */
+  html[data-theme="light"] .admin-page input {
+    background-color: var(--surface-light) !important;
+    border-color: var(--border) !important;
+    color: var(--app-foreground) !important;
+  }
+
+  html[data-theme="light"] .admin-page input::placeholder {
+    color: var(--muted) !important;
+    opacity: 0.7;
+  }
+
+  /* Hover da tabela */
+  html[data-theme="light"] .admin-page tr:hover {
+    background-color: var(--surface-light) !important;
+  }
+
+  /* Remove sombras escuras excessivas */
+  html[data-theme="light"] .admin-page [class*="shadow-black/"] {
+    --tw-shadow-color: transparent !important;
+  }
+`}</style>
+
       <div className="pointer-events-none fixed -bottom-40 -right-40 h-[500px] w-[500px] rounded-full bg-[#071124]/60 blur-[120px]" />
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.06)_1px,transparent_0)] bg-[size:32px_32px]" />
       

@@ -105,16 +105,16 @@ const navSections = [
     ],
   },
 
-  {
-    title: "SUPORTE",
-    items: [
-      {
-        href: "/ajuda",
-        label: "Central de Ajuda",
-        icon: CircleHelp,
-      },
-    ],
-  },
+  // {
+  //   title: "SUPORTE",
+  //   items: [
+  //     {
+  //       href: "/ajuda",
+  //       label: "Central de Ajuda",
+  //       icon: CircleHelp,
+  //     },
+  //   ],
+  // },
 ];
 
 function isNavItemActive(pathname: string, href: string) {

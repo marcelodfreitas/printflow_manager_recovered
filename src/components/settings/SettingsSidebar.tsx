@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -49,7 +50,39 @@ export function SettingsSidebar() {
   const pathname = usePathname();
 
   return (
-    <>
+    <div className="settings-sidebar">
+      <style jsx global>{`
+        /* LIGHT: MENU MOBILE E DESKTOP */
+        html[data-theme="light"] .settings-sidebar .settings-nav-link:not(.settings-active) {
+          color: var(--app-foreground) !important;
+          background-color: var(--surface) !important;
+          border-color: var(--border) !important;
+        }
+
+        html[data-theme="light"] .settings-sidebar .settings-nav-link:not(.settings-active):hover {
+          background-color: var(--surface-light) !important;
+          color: var(--app-foreground) !important;
+        }
+
+        /* ITEM SELECIONADO */
+        html[data-theme="light"] .settings-sidebar .settings-active {
+          background-color: var(--accent) !important;
+          border-color: var(--accent) !important;
+          color: #ffffff !important;
+        }
+
+        html[data-theme="light"] .settings-sidebar .settings-active * {
+          color: #ffffff !important;
+        }
+
+        /* CARD DA SIDEBAR DESKTOP */
+        html[data-theme="light"] .settings-sidebar .settings-desktop-card {
+          background-color: var(--surface) !important;
+          border-color: var(--border) !important;
+          box-shadow: none !important;
+        }
+      `}</style>
+
       {/* MOBILE */}
       <div className="lg:hidden">
         <div className="overflow-x-auto pb-1">
@@ -63,10 +96,10 @@ export function SettingsSidebar() {
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    "flex items-center gap-2 rounded-xl border px-3.5 py-2.5",
+                    "settings-nav-link flex items-center gap-2 rounded-xl border px-3.5 py-2.5",
                     "text-sm font-medium whitespace-nowrap transition-all duration-200",
                     active
-                      ? "border-[var(--accent)]/40 accent-bg text-white shadow-lg shadow-[var(--accent)]/20"
+                      ? "settings-active border-[var(--accent)]/40 accent-bg text-white shadow-lg shadow-[var(--accent)]/20"
                       : "border-white/10 bg-white/[0.03] text-white/60 hover:bg-white/[0.06] hover:text-white",
                   )}
                 >
@@ -81,7 +114,7 @@ export function SettingsSidebar() {
 
       {/* DESKTOP */}
       <aside className="hidden w-72 shrink-0 lg:block">
-        <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-3 backdrop-blur-2xl shadow-2xl shadow-black/30">
+        <div className="settings-desktop-card rounded-3xl border border-white/10 bg-white/[0.03] p-3 backdrop-blur-2xl shadow-2xl shadow-black/30">
           {items.map((item) => {
             const Icon = item.icon;
             const active = pathname === item.href;
@@ -91,9 +124,9 @@ export function SettingsSidebar() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "mb-1 flex items-center gap-3 rounded-2xl px-4 py-3 transition-all duration-200",
+                  "settings-nav-link mb-1 flex items-center gap-3 rounded-2xl px-4 py-3 transition-all duration-200",
                   active
-                    ? "accent-bg text-white shadow-lg shadow-accent/20"
+                    ? "settings-active accent-bg text-white shadow-lg shadow-accent/20"
                     : "text-white/60 hover:bg-white/5 hover:text-white",
                 )}
               >
@@ -107,6 +140,6 @@ export function SettingsSidebar() {
           })}
         </div>
       </aside>
-    </>
+    </div>
   );
 }
