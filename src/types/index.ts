@@ -23,7 +23,6 @@ export interface Client {
   createdAt: string;
 }
 
-
 export interface Printer {
   id: string;
   name: string;
@@ -41,13 +40,10 @@ export interface Printer {
   purchasePrice?: number;
   usefulLifeHours?: number;
   maintenanceCostPerHour?: number;
-
-  // Localização e custo de energia
   cep?: string;
   energyRate?: number;
   energyRateSource?: "automatic" | "manual";
 }
-
 
 export interface Filament {
   id: string;
@@ -61,11 +57,10 @@ export interface Filament {
   quantity: number;
   costPerKg: number;
   remainingWeight?: number;
-  purchaseDate?: string,
+  purchaseDate?: string;
   filamentId?: string;
   purchaseStore?: string;
 }
-
 
 export interface ProductFilamentColor {
   id: string;
@@ -96,8 +91,6 @@ export interface Product {
   filamentColors?: ProductFilamentColor[];
 }
 
-
-
 export type OrderStatus =
   | "financial"
   | "pending"
@@ -108,19 +101,18 @@ export type OrderStatus =
   | "delivered"
   | "cancelled";
 
-
 export interface Order {
   id: string;
   orderNumber?: number;
-  productId?: string;
+  productId?: string | null;
   productName?: string;
-  clientId: string;
+  clientId: string | null;
   clientName: string;
-  printerId: string;
-  printerName: string;
-  filamentId: string;
-  filamentName: string;
-  filamentColor: string;
+  printerId: string | null;
+  printerName: string | null;
+  filamentId: string | null;
+  filamentName: string | null;
+  filamentColor: string | null;
   status: OrderStatus;
   quantity: number;
   totalHours: number;
@@ -132,11 +124,10 @@ export interface Order {
   deadline?: string;
 }
 
-
 export interface OrderItem {
   id?: string;
   orderId?: string;
-  productId?: string;
+  productId?: string | null;
   productName: string;
   printerId?: string | null;
   printerName?: string | null;
@@ -151,10 +142,7 @@ export interface OrderItem {
   createdAt?: string;
 }
 
-export type OrderWithItems = Order & {
-  items: OrderItem[];
-};
-
+export type OrderWithItems = Order & { items: OrderItem[] };
 
 export type QuoteStatus = "draft" | "sent" | "approved" | "rejected" | "converted";
 

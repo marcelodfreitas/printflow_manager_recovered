@@ -58,6 +58,7 @@ const orderStatuses = [
 type OrderFormItem = {
   key: string;
   productId: string;
+  productName: string;
   printerId: string;
   filamentId: string;
   quantity: string;
@@ -70,6 +71,7 @@ function newItem(): OrderFormItem {
   return {
     key: `${Date.now()}-${Math.random()}`,
     productId: "",
+    productName: "",
     printerId: "",
     filamentId: "",
     quantity: "1",
@@ -186,6 +188,7 @@ export default function OrdersPage() {
 
   const [form, setForm] = useState({
     clientId: "",
+    clientName: "",
     status: "pending" as Order["status"],
     notes: "",
     deadline: "",
@@ -258,15 +261,29 @@ export default function OrdersPage() {
     );
   }
 
-  function selectProduct(key: string, productId: string) {
-    const product = products.find((p) => p.id === productId);
+  function selectProduct(key: string, productName: string) {
+    const product = products.find(
+      (entry) => entry.name.toLocaleLowerCase("pt-BR") === productName.trim().toLocaleLowerCase("pt-BR"),
+    );
 
     updateItem(key, {
-      productId,
+      productId: product?.id || "",
+      productName,
       totalMinutes: product ? String(product.printTimeMinutes) : "",
       filamentGrams: product ? String(product.filamentGrams) : "",
       price: product ? String(product.price) : "",
     });
+  }
+
+  function selectClientName(clientName: string) {
+    const client = clients.find(
+      (entry) => entry.name.toLocaleLowerCase("pt-BR") === clientName.trim().toLocaleLowerCase("pt-BR"),
+    );
+    setForm((previous) => ({
+      ...previous,
+      clientName,
+      clientId: client?.id || "",
+    }));
   }
 
   function openCreate() {
@@ -274,6 +291,7 @@ export default function OrdersPage() {
     setError("");
     setForm({
       clientId: "",
+      clientName: "",
       status: "pending",
       notes: "",
       deadline: "",
@@ -287,7 +305,8 @@ export default function OrdersPage() {
     setError("");
 
     setForm({
-      clientId: order.clientId,
+      clientId: order.clientId || "",
+      clientName: order.clientName || "",
       status: order.status,
       notes: order.notes || "",
       deadline: order.deadline || "",
@@ -300,6 +319,7 @@ export default function OrdersPage() {
         ? orderItems.map((item) => ({
             key: item.id || `${Date.now()}-${Math.random()}`,
             productId: item.productId || "",
+            productName: item.productName || "",
             printerId: item.printerId || "",
             filamentId: item.filamentId || "",
             quantity: String(item.quantity || 1),
@@ -342,8 +362,8 @@ export default function OrdersPage() {
 
     setError("");
 
-    if (!form.clientId) {
-      setError("Selecione um cliente para o pedido.");
+    if (!form.clientName.trim()) {
+      setError("Informe o nome do cliente.");
       return;
     }
 
@@ -352,19 +372,13 @@ export default function OrdersPage() {
       return;
     }
 
-    const selectedClient = clients.find((c) => c.id === form.clientId);
-
-    if (!selectedClient) {
-      setError("O cliente selecionado não foi encontrado.");
-      return;
-    }
-
+    const selectedClient = clients.find((client) => client.id === form.clientId);
     const resolvedItems: OrderItem[] = [];
 
-    items.forEach((item, index) => {
-      if (!item.productId || !item.printerId || !item.filamentId) {
+    for (const [index, item] of items.entries()) {
+      if (!item.productName.trim() || !item.printerId || !item.filamentId) {
         setError(
-          `Complete produto, impressora e filamento do item ${index + 1}.`,
+          `Informe o produto e selecione impressora e filamento do item ${index + 1}.`,
         );
         return;
       }
@@ -394,9 +408,9 @@ export default function OrdersPage() {
       const printer = printers.find((p) => p.id === item.printerId);
       const filament = filaments.find((f) => f.id === item.filamentId);
 
-      if (!product || !printer || !filament) {
+      if (!printer || !filament) {
         setError(
-          `Não foi possível encontrar todos os dados do item ${index + 1}.`,
+          `Não foi possível encontrar a impressora ou o filamento do item ${index + 1}.`,
         );
         return;
       }
@@ -404,8 +418,8 @@ export default function OrdersPage() {
       const cost = (filament.costPerKg * grams) / 1000;
 
       resolvedItems.push({
-        productId: product.id,
-        productName: product.name,
+        productId: product?.id || undefined,
+        productName: product?.name || item.productName.trim(),
         printerId: printer.id,
         printerName: printer.name,
         filamentId: filament.id,
@@ -418,7 +432,9 @@ export default function OrdersPage() {
         cost,
         price,
       });
-    });
+    }
+
+    if (resolvedItems.length !== items.length) return;
 
     const firstItem = resolvedItems[0];
     const totalQuantity = resolvedItems.reduce(
@@ -448,8 +464,8 @@ export default function OrdersPage() {
         resolvedItems.length === 1
           ? firstItem.productName
           : `${firstItem.productName} + ${resolvedItems.length - 1} produto(s)`,
-      clientId: selectedClient.id,
-      clientName: selectedClient.name,
+      clientId: selectedClient?.id || "",
+      clientName: selectedClient?.name || form.clientName.trim(),
       printerId: firstItem.printerId || "",
       printerName: firstItem.printerName || "",
       filamentId: firstItem.filamentId || "",
@@ -1012,26 +1028,23 @@ export default function OrdersPage() {
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <Select
-  id="client"
-  label="Cliente"
-  options={[...clients]
-    .sort((a, b) =>
-      a.name.localeCompare(b.name, "pt-BR", {
-        sensitivity: "base",
-      })
-    )
-    .map((client) => ({
-      value: client.id,
-      label: client.name,
-    }))}
-  value={form.clientId}
-  onChange={(e) =>
-    setForm((prev) => ({ ...prev, clientId: e.target.value }))
-  }
-  required
-  className="border-white/10 bg-white/[0.04] text-white"
-/>
+              <div>
+                <label htmlFor="client" className="mb-1.5 block text-sm font-medium text-white/65">Cliente</label>
+                <input
+                  id="client"
+                  list="order-clients"
+                  value={form.clientName}
+                  onChange={(event) => selectClientName(event.target.value)}
+                  placeholder="Digite ou selecione um cliente"
+                  required
+                  autoComplete="off"
+                  className="h-11 w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 text-sm text-white outline-none placeholder:text-white/25 focus:border-[rgba(var(--accent-rgb),0.45)]"
+                />
+                <datalist id="order-clients">
+                  {[...clients].sort((a, b) => a.name.localeCompare(b.name, "pt-BR")).map((client) => <option key={client.id} value={client.name} />)}
+                </datalist>
+                <p className="mt-1 text-[11px] text-white/35">Você pode usar um cliente cadastrado ou informar um novo nome.</p>
+              </div>
               <Select
                 id="status"
                 label="Status"
@@ -1094,18 +1107,23 @@ export default function OrdersPage() {
                   </div>
 
                   <div className="grid gap-4 sm:grid-cols-2">
-                    <Select
-                      id={`product-${item.key}`}
-                      label="Produto"
-                      options={products.map((product) => ({
-                        value: product.id,
-                        label: product.name,
-                      }))}
-                      value={item.productId}
-                      onChange={(e) => selectProduct(item.key, e.target.value)}
-                      required
-                      className="border-white/10 bg-white/[0.04] text-white"
-                    />
+                    <div>
+                      <label htmlFor={`product-${item.key}`} className="mb-1.5 block text-sm font-medium text-white/65">Produto</label>
+                      <input
+                        id={`product-${item.key}`}
+                        list={`order-products-${item.key}`}
+                        value={item.productName}
+                        onChange={(event) => selectProduct(item.key, event.target.value)}
+                        placeholder="Digite ou selecione um produto"
+                        required
+                        autoComplete="off"
+                        className="h-11 w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 text-sm text-white outline-none placeholder:text-white/25 focus:border-[rgba(var(--accent-rgb),0.45)]"
+                      />
+                      <datalist id={`order-products-${item.key}`}>
+                        {products.map((product) => <option key={product.id} value={product.name} />)}
+                      </datalist>
+                      <p className="mt-1 text-[11px] text-white/35">Produto cadastrado preenche os dados automaticamente.</p>
+                    </div>
                     <Select
                       id={`printer-${item.key}`}
                       label="Impressora"
@@ -1131,7 +1149,7 @@ export default function OrdersPage() {
                       onChange={(e) =>
                         updateItem(item.key, { filamentId: e.target.value })
                       }
-                      required
+                      
                       className="border-white/10 bg-white/[0.04] text-white"
                     />
                     <Input
@@ -1157,7 +1175,7 @@ export default function OrdersPage() {
                       onChange={(e) =>
                         updateItem(item.key, { totalMinutes: e.target.value })
                       }
-                      required
+                      
                       className="border-white/10 bg-white/[0.04] text-white"
                     />
                     <Input
@@ -1170,7 +1188,7 @@ export default function OrdersPage() {
                       onChange={(e) =>
                         updateItem(item.key, { filamentGrams: e.target.value })
                       }
-                      required
+                      
                       className="border-white/10 bg-white/[0.04] text-white"
                     />
                     <Input
