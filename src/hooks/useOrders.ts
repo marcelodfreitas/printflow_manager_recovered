@@ -15,6 +15,7 @@ type OrderPayload = {
   clientId: string | null;
   clientName: string;
   status: Order["status"];
+  soldAt: string;
   notes?: string;
   deadline?: string;
 };
@@ -25,6 +26,15 @@ type SavedOrderResponse = Record<string, unknown> & {
   items?: Record<string, unknown>[];
 };
 
+function getLocalDate(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
 export function useOrders() {
   const supabase = createClient();
   const [orders, setOrders] = useState<OrderWithItems[]>([]);
@@ -32,30 +42,38 @@ export function useOrders() {
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);
+
     try {
       const { data, error } = await supabase
         .from("orders")
         .select("*")
         .order("created_at", { ascending: false });
+
       if (error) throw error;
 
       const rows = data ?? [];
+
       if (rows.length === 0) {
         setOrders([]);
         return;
       }
 
       const orderIds = rows.map((order) => order.id);
+
       const { data: itemRows, error: itemError } = await supabase
         .from("order_items")
         .select("*")
         .in("order_id", orderIds);
+
       if (itemError) throw itemError;
 
       const itemsByOrder = new Map<string, OrderItem[]>();
+
       for (const rawItem of itemRows ?? []) {
         const item = toCamelCase<OrderItem>(rawItem);
+
         if (!item.orderId) continue;
+
         const existing = itemsByOrder.get(item.orderId) ?? [];
         existing.push(item);
         itemsByOrder.set(item.orderId, existing);
@@ -64,22 +82,34 @@ export function useOrders() {
       const mappedOrders = rows.map((row) => {
         const order = toCamelCase<Order>(row);
         const savedItems = itemsByOrder.get(order.id) ?? [];
-        const items: OrderItem[] = savedItems.length > 0 ? savedItems : [{
-          productId: order.productId ?? null,
-          productName: order.productName || "Produto sem nome",
-          printerId: order.printerId ?? null,
-          printerName: order.printerName ?? "",
-          filamentId: order.filamentId ?? null,
-          filamentName: order.filamentName ?? "",
-          filamentColor: order.filamentColor ?? "",
-          quantity: order.quantity || 1,
-          totalHours: order.totalHours || 0,
-          filamentGrams: order.filamentGrams || 0,
-          cost: order.cost || 0,
-          price: order.price || 0,
-        }];
-        return { ...order, items };
+
+        const items: OrderItem[] =
+          savedItems.length > 0
+            ? savedItems
+            : [
+                {
+                  productId: order.productId ?? null,
+                  productName: order.productName || "Produto sem nome",
+                  printerId: order.printerId ?? null,
+                  printerName: order.printerName ?? "",
+                  filamentId: order.filamentId ?? null,
+                  filamentName: order.filamentName ?? "",
+                  filamentColor: order.filamentColor ?? "",
+                  quantity: order.quantity || 1,
+                  totalHours: order.totalHours || 0,
+                  filamentGrams: order.filamentGrams || 0,
+                  cost: order.cost || 0,
+                  price: order.price || 0,
+                },
+              ];
+
+        return {
+          ...order,
+          items,
+          soldAt: order.soldAt || order.createdAt?.slice(0, 10) || "",
+        };
       });
+
       setOrders(mappedOrders);
     } catch (error) {
       console.error("Erro ao buscar pedidos:", error);
@@ -99,10 +129,12 @@ export function useOrders() {
   ): Promise<OrderWithItems | null> => {
     try {
       const userId = await getUserId();
+
       if (!userId) {
         console.error("Usuário não autenticado.");
         return null;
       }
+
       if (items.length === 0) {
         console.error("Adicione pelo menos um produto ao pedido.");
         return null;
@@ -112,6 +144,7 @@ export function useOrders() {
         client_id: order.clientId || null,
         client_name: order.clientName.trim(),
         status: order.status,
+        sold_at: order.soldAt || getLocalDate(),
         notes: order.notes ?? "",
         deadline: order.deadline ?? "",
       };
@@ -136,19 +169,31 @@ export function useOrders() {
         p_order: orderJson,
         p_items: itemsJson,
       });
+
       if (error) throw error;
 
       const response = data as SavedOrderResponse;
       const savedOrder = toCamelCase<Order>(response);
       const savedItems = toCamelCaseArray<OrderItem>(response.items ?? []);
-      const result: OrderWithItems = { ...savedOrder, items: savedItems };
+
+      const result: OrderWithItems = {
+        ...savedOrder,
+        soldAt: savedOrder.soldAt || order.soldAt,
+        items: savedItems,
+      };
 
       setOrders((previous) => {
-        const withoutSaved = previous.filter((existing) => existing.id !== result.id);
+        const withoutSaved = previous.filter(
+          (existing) => existing.id !== result.id,
+        );
+
         return [result, ...withoutSaved].sort(
-          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+          (a, b) =>
+            new Date(b.createdAt).getTime() -
+            new Date(a.createdAt).getTime(),
         );
       });
+
       return result;
     } catch (error) {
       console.error("Erro ao salvar pedido com itens:", error);
@@ -156,67 +201,99 @@ export function useOrders() {
     }
   };
 
-  async function create(input: OrderInput, items?: OrderItemInput[]): Promise<OrderWithItems | null> {
-    const resolvedItems: OrderItemInput[] = items ?? [{
-      productId: input.productId,
-      productName: input.productName || "Produto sem nome",
-      printerId: input.printerId,
-      printerName: input.printerName,
-      filamentId: input.filamentId,
-      filamentName: input.filamentName,
-      filamentColor: input.filamentColor,
-      quantity: input.quantity,
-      totalHours: input.totalHours,
-      filamentGrams: input.filamentGrams,
-      cost: input.cost,
-      price: input.price,
-    }];
+  async function create(
+    input: OrderInput,
+    items?: OrderItemInput[],
+  ): Promise<OrderWithItems | null> {
+    const resolvedItems: OrderItemInput[] = items ?? [
+      {
+        productId: input.productId,
+        productName: input.productName || "Produto sem nome",
+        printerId: input.printerId,
+        printerName: input.printerName,
+        filamentId: input.filamentId,
+        filamentName: input.filamentName,
+        filamentColor: input.filamentColor,
+        quantity: input.quantity,
+        totalHours: input.totalHours,
+        filamentGrams: input.filamentGrams,
+        cost: input.cost,
+        price: input.price,
+      },
+    ];
 
-    return saveWithItems(null, {
-      clientId: input.clientId || null,
-      clientName: input.clientName,
-      status: input.status,
-      notes: input.notes,
-      deadline: input.deadline,
-    }, resolvedItems);
+    return saveWithItems(
+      null,
+      {
+        clientId: input.clientId || null,
+        clientName: input.clientName,
+        status: input.status,
+        soldAt: input.soldAt || getLocalDate(),
+        notes: input.notes,
+        deadline: input.deadline,
+      },
+      resolvedItems,
+    );
   }
 
-  async function update(id: string, input: Partial<Order>, items?: OrderItemInput[]): Promise<OrderWithItems | null> {
+  async function update(
+    id: string,
+    input: Partial<Order>,
+    items?: OrderItemInput[],
+  ): Promise<OrderWithItems | null> {
     const existing = orders.find((order) => order.id === id);
+
     if (!existing) {
       console.error("Pedido não encontrado na lista local.");
       return null;
     }
-    const merged: Order = { ...existing, ...input };
-    const resolvedItems: OrderItemInput[] = items ?? existing.items.map((item) => ({
-      productId: item.productId,
-      productName: item.productName,
-      printerId: item.printerId,
-      printerName: item.printerName,
-      filamentId: item.filamentId,
-      filamentName: item.filamentName,
-      filamentColor: item.filamentColor,
-      quantity: item.quantity,
-      totalHours: item.totalHours,
-      filamentGrams: item.filamentGrams,
-      cost: item.cost,
-      price: item.price,
-    }));
 
-    return saveWithItems(id, {
-      clientId: merged.clientId || null,
-      clientName: merged.clientName,
-      status: merged.status,
-      notes: merged.notes,
-      deadline: merged.deadline,
-    }, resolvedItems);
+    const merged: Order = { ...existing, ...input };
+
+    const resolvedItems: OrderItemInput[] =
+      items ??
+      existing.items.map((item) => ({
+        productId: item.productId,
+        productName: item.productName,
+        printerId: item.printerId,
+        printerName: item.printerName,
+        filamentId: item.filamentId,
+        filamentName: item.filamentName,
+        filamentColor: item.filamentColor,
+        quantity: item.quantity,
+        totalHours: item.totalHours,
+        filamentGrams: item.filamentGrams,
+        cost: item.cost,
+        price: item.price,
+      }));
+
+    return saveWithItems(
+      id,
+      {
+        clientId: merged.clientId || null,
+        clientName: merged.clientName,
+        status: merged.status,
+        soldAt: merged.soldAt || getLocalDate(),
+        notes: merged.notes,
+        deadline: merged.deadline,
+      },
+      resolvedItems,
+    );
   }
 
   async function remove(id: string) {
     try {
-      const { error } = await supabase.from("orders").delete().eq("id", id);
+      const { error } = await supabase
+        .from("orders")
+        .delete()
+        .eq("id", id);
+
       if (error) throw error;
-      setOrders((previous) => previous.filter((order) => order.id !== id));
+
+      setOrders((previous) =>
+        previous.filter((order) => order.id !== id),
+      );
+
       return true;
     } catch (error) {
       console.error("Erro ao excluir pedido:", error);

@@ -121,6 +121,7 @@ export interface Order {
   price: number;
   notes?: string;
   createdAt: string;
+  soldAt?: string;
   deadline?: string;
 }
 

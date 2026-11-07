@@ -81,6 +81,19 @@ function newItem(): OrderFormItem {
   };
 }
 
+function getLocalDate(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function getOrderSaleDate(order: Order): string {
+  return order.soldAt || order.createdAt?.slice(0, 10) || "";
+}
+
 function StatusBadge({ status }: { status: string }) {
   const config: Record<
     string,
@@ -190,6 +203,7 @@ export default function OrdersPage() {
     clientId: "",
     clientName: "",
     status: "pending" as Order["status"],
+    soldAt: getLocalDate(),
     notes: "",
     deadline: "",
   });
@@ -218,13 +232,28 @@ export default function OrdersPage() {
     });
   }, [orders, search, statusFilter]);
 
-  const totalRevenue = orders
-  .filter(
-    (order) =>
-      order.status !== "cancelled" &&
-      order.status !== "financial",
-  )
-  .reduce((sum, order) => sum + (Number(order.price) || 0), 0);
+  const currentMonth = getLocalDate().slice(0, 7);
+
+  const revenueOrders = orders.filter((order) => {
+    const saleDate = getOrderSaleDate(order);
+    return order.status !== "cancelled" && saleDate.startsWith(currentMonth);
+  });
+
+  // Faturamento considera vendas confirmadas, inclusive as que ainda
+  // possuem pendência financeira. Cancelamentos ficam fora.
+  const totalRevenue = revenueOrders.reduce(
+    (sum, order) => sum + (Number(order.price) || 0),
+    0,
+  );
+
+  const financialOrders = orders.filter(
+    (order) => order.status === "financial",
+  );
+
+  const pendingFinancialValue = financialOrders.reduce(
+    (sum, order) => sum + (Number(order.price) || 0),
+    0,
+  );
 
   const pendingOrders = orders.filter((o) => o.status === "pending").length;
 
@@ -293,6 +322,7 @@ export default function OrdersPage() {
       clientId: "",
       clientName: "",
       status: "pending",
+      soldAt: getLocalDate(),
       notes: "",
       deadline: "",
     });
@@ -308,6 +338,7 @@ export default function OrdersPage() {
       clientId: order.clientId || "",
       clientName: order.clientName || "",
       status: order.status,
+      soldAt: getOrderSaleDate(order) || getLocalDate(),
       notes: order.notes || "",
       deadline: order.deadline || "",
     });
@@ -375,7 +406,8 @@ export default function OrdersPage() {
     const selectedClient = clients.find((client) => client.id === form.clientId);
     const resolvedItems: OrderItem[] = [];
 
-    for (const [index, item] of items.entries()) {
+    for (let index = 0; index < items.length; index++) {
+  const item = items[index];
       if (!item.productName.trim() || !item.printerId || !item.filamentId) {
         setError(
           `Informe o produto e selecione impressora e filamento do item ${index + 1}.`,
@@ -472,6 +504,7 @@ export default function OrdersPage() {
       filamentName: firstItem.filamentName || "",
       filamentColor: firstItem.filamentColor || "",
       status: form.status,
+      soldAt: form.soldAt,
       quantity: totalQuantity,
       totalHours,
       filamentGrams: totalGrams,
@@ -677,25 +710,14 @@ export default function OrdersPage() {
           </div>
         ) : (
           <>
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-6">
               <SummaryCard
                 icon={ShoppingCart}
                 label="Total"
                 value={orders.length}
                 description="Pedidos cadastrados"
               />
-              <SummaryCard
-                icon={Clock3}
-                label="Pendentes"
-                value={pendingOrders}
-                description="Aguardando produção"
-              />
-              <SummaryCard
-                icon={Printer}
-                label="Em produção"
-                value={inProgressOrders}
-                description="Aprovados ou imprimindo"
-              />
+              
               <SummaryCard
                 icon={CheckCircle2}
                 label="Concluídos"
@@ -704,9 +726,15 @@ export default function OrdersPage() {
               />
               <SummaryCard
                 icon={CircleDollarSign}
-                label="Faturamento"
+                label="Faturamento do mês"
                 value={formatCurrency(totalRevenue)}
-                description="Pedidos não cancelados"
+                description="Vendas confirmadas no mês atual"
+              />
+              <SummaryCard
+                icon={Clock3}
+                label="Pendente financeiro"
+                value={formatCurrency(pendingFinancialValue)}
+                description={`${financialOrders.length} ${financialOrders.length === 1 ? "pedido aguardando" : "pedidos aguardando"} pagamento`}
               />
             </div>
 
@@ -761,6 +789,7 @@ export default function OrdersPage() {
                         <TableHeadCell>Qtd.</TableHeadCell>
                         <TableHeadCell>Valor</TableHeadCell>
                         <TableHeadCell>Status</TableHeadCell>
+                        <TableHeadCell>Data da venda</TableHeadCell>
                         <TableHeadCell>Criação</TableHeadCell>
                         <TableHeadCell className="text-right">
                           Ações
@@ -842,6 +871,11 @@ export default function OrdersPage() {
                             <StatusBadge status={order.status} />
                           </TableCell>
                           <TableCell>
+                            <span className="text-xs text-white/70">
+                              {formatDate(getOrderSaleDate(order))}
+                            </span>
+                          </TableCell>
+                          <TableCell>
                             <span className="text-xs text-white/40">
                               {formatDate(order.createdAt)}
                             </span>
@@ -881,7 +915,7 @@ export default function OrdersPage() {
                       ))}
                       {filtered.length === 0 && (
                         <TableRow>
-                          <TableCell colSpan={9}>
+                          <TableCell colSpan={10}>
                             <div className="flex flex-col items-center justify-center py-14">
                               <ShoppingCart className="h-6 w-6 text-white/25" />
                               <p className="mt-4 text-sm font-medium text-white/60">
@@ -952,7 +986,15 @@ export default function OrdersPage() {
                         </div>
                       </div>
 
-                      <div className="mt-3 flex items-center justify-between border-t border-white/5 pt-3">
+                      <div className="mt-3 grid grid-cols-2 gap-3 border-t border-white/5 pt-3">
+                        <div>
+                          <p className="text-[10px] uppercase text-white/25">
+                            Data da venda
+                          </p>
+                          <p className="mt-1 text-xs text-white/70">
+                            {formatDate(getOrderSaleDate(order))}
+                          </p>
+                        </div>
                         <div>
                           <p className="text-[10px] uppercase text-white/25">
                             Criado em
@@ -1027,7 +1069,7 @@ export default function OrdersPage() {
               </h3>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-3">
               <div>
                 <label htmlFor="client" className="mb-1.5 block text-sm font-medium text-white/65">Cliente</label>
                 <input
@@ -1056,6 +1098,17 @@ export default function OrdersPage() {
                     status: e.target.value as Order["status"],
                   }))
                 }
+                className="border-white/10 bg-white/[0.04] text-white"
+              />
+              <Input
+                id="soldAt"
+                label="Data da venda"
+                type="date"
+                value={form.soldAt}
+                onChange={(e) =>
+                  setForm((prev) => ({ ...prev, soldAt: e.target.value }))
+                }
+                required
                 className="border-white/10 bg-white/[0.04] text-white"
               />
             </div>
