@@ -165,15 +165,34 @@ function getUsage(items: OrderItem[], cancelled: boolean) {
   if (cancelled) return usage;
 
   for (const item of items) {
-    if (!item.filamentId) continue;
-
-    const grams = Math.max(0, Number(item.filamentGrams) || 0);
     const quantity = Math.max(0, Number(item.quantity) || 0);
 
-    usage.set(
-      item.filamentId,
-      (usage.get(item.filamentId) ?? 0) + grams * quantity,
-    );
+    if (item.filaments?.length) {
+      for (const filament of item.filaments) {
+        if (!filament.filamentId) continue;
+
+        const grams = Math.max(0, Number(filament.grams) || 0);
+
+        if (grams <= 0) continue;
+
+        usage.set(
+          filament.filamentId,
+          (usage.get(filament.filamentId) ?? 0) + grams * quantity,
+        );
+      }
+
+      continue;
+    }
+
+    // Compatibilidade com pedidos antigos.
+    if (item.filamentId) {
+      const grams = Math.max(0, Number(item.filamentGrams) || 0);
+
+      usage.set(
+        item.filamentId,
+        (usage.get(item.filamentId) ?? 0) + grams * quantity,
+      );
+    }
   }
 
   return usage;
@@ -291,18 +310,27 @@ export default function OrdersPage() {
   }
 
   function selectProduct(key: string, productName: string) {
-    const product = products.find(
-      (entry) => entry.name.toLocaleLowerCase("pt-BR") === productName.trim().toLocaleLowerCase("pt-BR"),
-    );
+  const product = products.find(
+    (entry) =>
+      entry.name.toLocaleLowerCase("pt-BR") ===
+      productName.trim().toLocaleLowerCase("pt-BR"),
+  );
 
-    updateItem(key, {
-      productId: product?.id || "",
-      productName,
-      totalMinutes: product ? String(product.printTimeMinutes) : "",
-      filamentGrams: product ? String(product.filamentGrams) : "",
-      price: product ? String(product.price) : "",
-    });
-  }
+  updateItem(key, {
+    productId: product?.id || "",
+    productName,
+    totalMinutes: product ? String(product.printTimeMinutes) : "",
+    filamentGrams: product
+      ? String(
+          product.filamentColors?.reduce(
+            (sum, color) => sum + (Number(color.grams) || 0),
+            0,
+          ) ?? product.filamentGrams,
+        )
+      : "",
+    price: product ? String(product.price) : "",
+  });
+}
 
   function selectClientName(clientName: string) {
     const client = clients.find(
@@ -387,37 +415,42 @@ export default function OrdersPage() {
     });
   }
 
-  async function handleSave(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (saving) return;
+  
 
-    setError("");
+async function handleSave(event: React.FormEvent<HTMLFormElement>) {
+  event.preventDefault();
+  if (saving) return;
 
-    if (!form.clientName.trim()) {
-      setError("Informe o nome do cliente.");
-      return;
-    }
+  setError("");
 
-    if (items.length === 0) {
-      setError("Adicione pelo menos um produto.");
-      return;
-    }
+  if (!form.clientName.trim()) {
+    setError("Informe o nome do cliente.");
+    return;
+  }
 
-    const selectedClient = clients.find((client) => client.id === form.clientId);
-    const resolvedItems: OrderItem[] = [];
+  if (items.length === 0) {
+    setError("Adicione pelo menos um produto.");
+    return;
+  }
 
+  const selectedClient = clients.find(
+    (client) => client.id === form.clientId,
+  );
+
+  const resolvedItems: OrderItem[] = [];
+
+  try {
     for (let index = 0; index < items.length; index++) {
-  const item = items[index];
-      if (!item.productName.trim() || !item.printerId || !item.filamentId) {
-        setError(
-          `Informe o produto e selecione impressora e filamento do item ${index + 1}.`,
+      const item = items[index];
+
+      if (!item.productName.trim() || !item.printerId) {
+        throw new Error(
+          `Informe o produto e selecione a impressora do item ${index + 1}.`,
         );
-        return;
       }
 
       const quantity = Number(item.quantity);
       const minutes = Number(item.totalMinutes);
-      const grams = Number(item.filamentGrams);
       const price = Number(item.price);
 
       if (
@@ -425,66 +458,154 @@ export default function OrdersPage() {
         quantity < 1 ||
         !Number.isFinite(minutes) ||
         minutes < 0 ||
-        !Number.isFinite(grams) ||
-        grams < 0 ||
         !Number.isFinite(price) ||
         price < 0
       ) {
-        setError(
-          `Confira quantidade, tempo, filamento e preço do item ${index + 1}.`,
+        throw new Error(
+          `Confira a quantidade, o tempo e o preço do item ${index + 1}.`,
         );
-        return;
       }
 
-      const product = products.find((p) => p.id === item.productId);
-      const printer = printers.find((p) => p.id === item.printerId);
-      const filament = filaments.find((f) => f.id === item.filamentId);
+      const product = products.find(
+        (p) => p.id === item.productId,
+      );
 
-      if (!printer || !filament) {
-        setError(
-          `Não foi possível encontrar a impressora ou o filamento do item ${index + 1}.`,
+      const printer = printers.find(
+        (p) => p.id === item.printerId,
+      );
+
+      if (!printer) {
+        throw new Error(
+          `Não foi possível encontrar a impressora do item ${index + 1}.`,
         );
-        return;
       }
 
-      const cost = (filament.costPerKg * grams) / 1000;
+      // PRODUTO CADASTRADO: utiliza as cores e os consumos registrados.
+      if (product) {
+        const productColors = product.filamentColors ?? [];
 
-      resolvedItems.push({
-        productId: product?.id || undefined,
-        productName: product?.name || item.productName.trim(),
-        printerId: printer.id,
-        printerName: printer.name,
-        filamentId: filament.id,
-        filamentName: filament.name,
-        filamentColor: filament.colorHex || filament.color || "",
-        quantity,
-        // O formulário recebe minutos, mas o banco armazena horas.
-        totalHours: minutes / 60,
-        filamentGrams: grams,
-        cost,
-        price,
-      });
+        if (
+          productColors.length === 0 &&
+          Number(product.filamentGrams) > 0
+        ) {
+          throw new Error(
+            `O produto "${product.name}" possui consumo de filamento, mas não possui cores vinculadas. Configure os filamentos no cadastro do produto.`,
+          );
+        }
+
+        const itemFilaments = productColors.map((color) => {
+          const colorGrams = Math.max(
+            0,
+            Number(color.grams) || 0,
+          );
+
+          const filament = color.filamentId
+            ? filaments.find((f) => f.id === color.filamentId)
+            : undefined;
+
+          if (colorGrams > 0 && !filament) {
+            throw new Error(
+              `O filamento da cor "${color.name}" do produto "${product.name}" não está vinculado ao estoque.`,
+            );
+          }
+
+          const pricePerKg = Math.max(
+            0,
+            Number(color.pricePerKg) || 0,
+          );
+
+          return {
+            productColorId: color.id,
+            filamentId: color.filamentId ?? null,
+            filamentName: filament?.name ?? color.name,
+            filamentColor: filament?.color ?? color.name,
+            hexColor: color.hexColor ?? filament?.colorHex ?? null,
+            material: color.material ?? filament?.type ?? null,
+            grams: colorGrams,
+            pricePerKg,
+            cost: (colorGrams / 1000) * pricePerKg,
+          };
+        });
+
+        const totalGrams = itemFilaments.reduce(
+          (sum, filament) => sum + filament.grams,
+          0,
+        );
+
+        const totalCost = itemFilaments.reduce(
+          (sum, filament) => sum + filament.cost,
+          0,
+        );
+
+        const firstFilament = itemFilaments.find(
+          (filament) => filament.grams > 0,
+        );
+
+        resolvedItems.push({
+          productId: product.id,
+          productName: product.name,
+          printerId: printer.id,
+          printerName: printer.name,
+          filamentId: firstFilament?.filamentId ?? null,
+          filamentName: firstFilament?.filamentName ?? null,
+          filamentColor: firstFilament?.hexColor ?? null,
+          filaments: itemFilaments,
+          quantity,
+          totalHours: minutes / 60,
+          filamentGrams: totalGrams,
+          cost: totalCost,
+          price,
+        });
+      } else {
+        // PRODUTO MANUAL: não exige cadastro nem vínculo com estoque.
+        const manualGrams = Number(item.filamentGrams);
+
+        if (!Number.isFinite(manualGrams) || manualGrams < 0) {
+          throw new Error(
+            `Confira o consumo de filamento do item ${index + 1}.`,
+          );
+        }
+
+        resolvedItems.push({
+          productId: null,
+          productName: item.productName.trim(),
+          printerId: printer.id,
+          printerName: printer.name,
+          filamentId: null,
+          filamentName: "Consumo manual",
+          filamentColor: null,
+          filaments: [],
+          quantity,
+          totalHours: minutes / 60,
+          filamentGrams: manualGrams,
+          cost: 0,
+          price,
+        });
+      }
     }
 
-    if (resolvedItems.length !== items.length) return;
-
     const firstItem = resolvedItems[0];
+
     const totalQuantity = resolvedItems.reduce(
       (sum, item) => sum + item.quantity,
       0,
     );
+
     const totalHours = resolvedItems.reduce(
       (sum, item) => sum + item.totalHours * item.quantity,
       0,
     );
+
     const totalGrams = resolvedItems.reduce(
       (sum, item) => sum + item.filamentGrams * item.quantity,
       0,
     );
+
     const totalCost = resolvedItems.reduce(
       (sum, item) => sum + item.cost * item.quantity,
       0,
     );
+
     const totalPrice = resolvedItems.reduce(
       (sum, item) => sum + item.price * item.quantity,
       0,
@@ -496,13 +617,17 @@ export default function OrdersPage() {
         resolvedItems.length === 1
           ? firstItem.productName
           : `${firstItem.productName} + ${resolvedItems.length - 1} produto(s)`,
+
       clientId: selectedClient?.id || "",
       clientName: selectedClient?.name || form.clientName.trim(),
+
       printerId: firstItem.printerId || "",
       printerName: firstItem.printerName || "",
+
       filamentId: firstItem.filamentId || "",
       filamentName: firstItem.filamentName || "",
       filamentColor: firstItem.filamentColor || "",
+
       status: form.status,
       soldAt: form.soldAt,
       quantity: totalQuantity,
@@ -516,55 +641,64 @@ export default function OrdersPage() {
 
     setSaving(true);
 
-    try {
-      const result = editingOrder
-        ? await update(editingOrder.id, data, resolvedItems)
-        : await create(data, resolvedItems);
+    const result = editingOrder
+      ? await update(editingOrder.id, data, resolvedItems)
+      : await create(data, resolvedItems);
 
-      if (!result) {
-        setError(
-          "Não foi possível salvar o pedido. Confira o console do navegador.",
-        );
-        return;
-      }
-
-      const previousItems = editingOrder ? getOrderItems(editingOrder) : [];
-      const previousCancelled = editingOrder?.status === "cancelled";
-      const nextItems = getOrderItems(result);
-
-      await reconcileStock(
-        previousItems,
-        previousCancelled,
-        nextItems,
-        result.status === "cancelled",
+    if (!result) {
+      setError(
+        "Não foi possível salvar o pedido. Confira o console do navegador.",
       );
+      return;
+    }
 
-      if (editingOrder) {
-        if (result.status !== editingOrder.status) {
-          await createNotification({
-            type: "order",
-            referenceId: result.id,
-            title: "Status do pedido atualizado",
-            description: `Pedido #${result.orderNumber ?? ""} agora está ${translateStatus(result.status)}.`,
-          });
-        }
-      } else {
+    const previousItems = editingOrder
+      ? getOrderItems(editingOrder)
+      : [];
+
+    const previousCancelled = editingOrder?.status === "cancelled";
+    const nextItems = getOrderItems(result);
+
+    await reconcileStock(
+      previousItems,
+      previousCancelled,
+      nextItems,
+      result.status === "cancelled",
+    );
+
+    if (editingOrder) {
+      if (result.status !== editingOrder.status) {
         await createNotification({
           type: "order",
           referenceId: result.id,
-          title: "Novo pedido criado",
-          description: `Pedido #${result.orderNumber ?? ""} de ${result.clientName} criado.`,
+          title: "Status do pedido atualizado",
+          description: `Pedido #${result.orderNumber ?? ""} agora está ${translateStatus(result.status)}.`,
         });
       }
-
-      setModalOpen(false);
-    } catch (saveError) {
-      console.error("Erro ao salvar pedido:", saveError);
-      setError("Ocorreu um erro ao salvar o pedido.");
-    } finally {
-      setSaving(false);
+    } else {
+      await createNotification({
+        type: "order",
+        referenceId: result.id,
+        title: "Novo pedido criado",
+        description: `Pedido #${result.orderNumber ?? ""} de ${result.clientName} criado.`,
+      });
     }
+
+    setModalOpen(false);
+  } catch (saveError) {
+    console.error("Erro ao salvar pedido:", saveError);
+
+    setError(
+      saveError instanceof Error
+        ? saveError.message
+        : "Ocorreu um erro ao salvar o pedido.",
+    );
+  } finally {
+    setSaving(false);
   }
+}
+
+
 
   async function handleDelete(order: OrderWithItems) {
     if (!confirm("Tem certeza que deseja excluir este pedido?")) return;
@@ -1191,20 +1325,7 @@ export default function OrdersPage() {
                       required
                       className="border-white/10 bg-white/[0.04] text-white"
                     />
-                    <Select
-                      id={`filament-${item.key}`}
-                      label="Filamento"
-                      options={filaments.map((filament) => ({
-                        value: filament.id,
-                        label: `${filament.name} - ${filament.color}`,
-                      }))}
-                      value={item.filamentId}
-                      onChange={(e) =>
-                        updateItem(item.key, { filamentId: e.target.value })
-                      }
-                      
-                      className="border-white/10 bg-white/[0.04] text-white"
-                    />
+                    
                     <Input
                       id={`quantity-${item.key}`}
                       label="Quantidade"
@@ -1215,7 +1336,7 @@ export default function OrdersPage() {
                       onChange={(e) =>
                         updateItem(item.key, { quantity: e.target.value })
                       }
-                      required
+                      
                       className="border-white/10 bg-white/[0.04] text-white"
                     />
                     <Input

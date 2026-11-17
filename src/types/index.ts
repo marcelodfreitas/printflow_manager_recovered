@@ -73,6 +73,21 @@ export interface ProductFilamentColor {
   filamentId?: string;
 }
 
+export interface OrderItemFilament {
+  id?: string;
+  orderItemId?: string;
+  filamentId?: string | null;
+  productColorId?: string | null;
+  filamentName: string;
+  filamentColor?: string | null;
+  hexColor?: string | null;
+  material?: string | null;
+  grams: number;
+  pricePerKg: number;
+  cost: number;
+  createdAt?: string;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -140,6 +155,7 @@ export interface OrderItem {
   filamentGrams: number;
   cost: number;
   price: number;
+  filaments?: OrderItemFilament[];
   createdAt?: string;
 }
 
