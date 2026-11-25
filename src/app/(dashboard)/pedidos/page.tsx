@@ -198,6 +198,16 @@ function getUsage(items: OrderItem[], cancelled: boolean) {
   return usage;
 }
 
+function formatDuration(totalMinutes: number): string {
+  const minutes = Math.max(0, Math.round(totalMinutes || 0));
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+
+  if (hours === 0) return `${remainingMinutes} min`;
+
+  return `${hours}h ${String(remainingMinutes).padStart(2, "0")}min`;
+}
+
 export default function OrdersPage() {
   const {
     orders,
@@ -310,31 +320,33 @@ export default function OrdersPage() {
   }
 
   function selectProduct(key: string, productName: string) {
-  const product = products.find(
-    (entry) =>
-      entry.name.toLocaleLowerCase("pt-BR") ===
-      productName.trim().toLocaleLowerCase("pt-BR"),
-  );
+    const product = products.find(
+      (entry) =>
+        entry.name.toLocaleLowerCase("pt-BR") ===
+        productName.trim().toLocaleLowerCase("pt-BR"),
+    );
 
-  updateItem(key, {
-    productId: product?.id || "",
-    productName,
-    totalMinutes: product ? String(product.printTimeMinutes) : "",
-    filamentGrams: product
-      ? String(
-          product.filamentColors?.reduce(
-            (sum, color) => sum + (Number(color.grams) || 0),
-            0,
-          ) ?? product.filamentGrams,
-        )
-      : "",
-    price: product ? String(product.price) : "",
-  });
-}
+    updateItem(key, {
+      productId: product?.id || "",
+      productName,
+      totalMinutes: product ? String(product.printTimeMinutes) : "",
+      filamentGrams: product
+        ? String(
+            product.filamentColors?.reduce(
+              (sum, color) => sum + (Number(color.grams) || 0),
+              0,
+            ) ?? product.filamentGrams,
+          )
+        : "",
+      price: product ? String(product.price) : "",
+    });
+  }
 
   function selectClientName(clientName: string) {
     const client = clients.find(
-      (entry) => entry.name.toLocaleLowerCase("pt-BR") === clientName.trim().toLocaleLowerCase("pt-BR"),
+      (entry) =>
+        entry.name.toLocaleLowerCase("pt-BR") ===
+        clientName.trim().toLocaleLowerCase("pt-BR"),
     );
     setForm((previous) => ({
       ...previous,
@@ -415,290 +427,271 @@ export default function OrdersPage() {
     });
   }
 
-  
+  async function handleSave(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (saving) return;
 
-async function handleSave(event: React.FormEvent<HTMLFormElement>) {
-  event.preventDefault();
-  if (saving) return;
+    setError("");
 
-  setError("");
-
-  if (!form.clientName.trim()) {
-    setError("Informe o nome do cliente.");
-    return;
-  }
-
-  if (items.length === 0) {
-    setError("Adicione pelo menos um produto.");
-    return;
-  }
-
-  const selectedClient = clients.find(
-    (client) => client.id === form.clientId,
-  );
-
-  const resolvedItems: OrderItem[] = [];
-
-  try {
-    for (let index = 0; index < items.length; index++) {
-      const item = items[index];
-
-      if (!item.productName.trim() || !item.printerId) {
-        throw new Error(
-          `Informe o produto e selecione a impressora do item ${index + 1}.`,
-        );
-      }
-
-      const quantity = Number(item.quantity);
-      const minutes = Number(item.totalMinutes);
-      const price = Number(item.price);
-
-      if (
-        !Number.isInteger(quantity) ||
-        quantity < 1 ||
-        !Number.isFinite(minutes) ||
-        minutes < 0 ||
-        !Number.isFinite(price) ||
-        price < 0
-      ) {
-        throw new Error(
-          `Confira a quantidade, o tempo e o preço do item ${index + 1}.`,
-        );
-      }
-
-      const product = products.find(
-        (p) => p.id === item.productId,
-      );
-
-      const printer = printers.find(
-        (p) => p.id === item.printerId,
-      );
-
-      if (!printer) {
-        throw new Error(
-          `Não foi possível encontrar a impressora do item ${index + 1}.`,
-        );
-      }
-
-      // PRODUTO CADASTRADO: utiliza as cores e os consumos registrados.
-      if (product) {
-        const productColors = product.filamentColors ?? [];
-
-        if (
-          productColors.length === 0 &&
-          Number(product.filamentGrams) > 0
-        ) {
-          throw new Error(
-            `O produto "${product.name}" possui consumo de filamento, mas não possui cores vinculadas. Configure os filamentos no cadastro do produto.`,
-          );
-        }
-
-        const itemFilaments = productColors.map((color) => {
-          const colorGrams = Math.max(
-            0,
-            Number(color.grams) || 0,
-          );
-
-          const filament = color.filamentId
-            ? filaments.find((f) => f.id === color.filamentId)
-            : undefined;
-
-          if (colorGrams > 0 && !filament) {
-            throw new Error(
-              `O filamento da cor "${color.name}" do produto "${product.name}" não está vinculado ao estoque.`,
-            );
-          }
-
-          const pricePerKg = Math.max(
-            0,
-            Number(color.pricePerKg) || 0,
-          );
-
-          return {
-            productColorId: color.id,
-            filamentId: color.filamentId ?? null,
-            filamentName: filament?.name ?? color.name,
-            filamentColor: filament?.color ?? color.name,
-            hexColor: color.hexColor ?? filament?.colorHex ?? null,
-            material: color.material ?? filament?.type ?? null,
-            grams: colorGrams,
-            pricePerKg,
-            cost: (colorGrams / 1000) * pricePerKg,
-          };
-        });
-
-        const totalGrams = itemFilaments.reduce(
-          (sum, filament) => sum + filament.grams,
-          0,
-        );
-
-        const totalCost = itemFilaments.reduce(
-          (sum, filament) => sum + filament.cost,
-          0,
-        );
-
-        const firstFilament = itemFilaments.find(
-          (filament) => filament.grams > 0,
-        );
-
-        resolvedItems.push({
-          productId: product.id,
-          productName: product.name,
-          printerId: printer.id,
-          printerName: printer.name,
-          filamentId: firstFilament?.filamentId ?? null,
-          filamentName: firstFilament?.filamentName ?? null,
-          filamentColor: firstFilament?.hexColor ?? null,
-          filaments: itemFilaments,
-          quantity,
-          totalHours: minutes / 60,
-          filamentGrams: totalGrams,
-          cost: totalCost,
-          price,
-        });
-      } else {
-        // PRODUTO MANUAL: não exige cadastro nem vínculo com estoque.
-        const manualGrams = Number(item.filamentGrams);
-
-        if (!Number.isFinite(manualGrams) || manualGrams < 0) {
-          throw new Error(
-            `Confira o consumo de filamento do item ${index + 1}.`,
-          );
-        }
-
-        resolvedItems.push({
-          productId: null,
-          productName: item.productName.trim(),
-          printerId: printer.id,
-          printerName: printer.name,
-          filamentId: null,
-          filamentName: "Consumo manual",
-          filamentColor: null,
-          filaments: [],
-          quantity,
-          totalHours: minutes / 60,
-          filamentGrams: manualGrams,
-          cost: 0,
-          price,
-        });
-      }
-    }
-
-    const firstItem = resolvedItems[0];
-
-    const totalQuantity = resolvedItems.reduce(
-      (sum, item) => sum + item.quantity,
-      0,
-    );
-
-    const totalHours = resolvedItems.reduce(
-      (sum, item) => sum + item.totalHours * item.quantity,
-      0,
-    );
-
-    const totalGrams = resolvedItems.reduce(
-      (sum, item) => sum + item.filamentGrams * item.quantity,
-      0,
-    );
-
-    const totalCost = resolvedItems.reduce(
-      (sum, item) => sum + item.cost * item.quantity,
-      0,
-    );
-
-    const totalPrice = resolvedItems.reduce(
-      (sum, item) => sum + item.price * item.quantity,
-      0,
-    );
-
-    const data = {
-      productId: firstItem.productId,
-      productName:
-        resolvedItems.length === 1
-          ? firstItem.productName
-          : `${firstItem.productName} + ${resolvedItems.length - 1} produto(s)`,
-
-      clientId: selectedClient?.id || "",
-      clientName: selectedClient?.name || form.clientName.trim(),
-
-      printerId: firstItem.printerId || "",
-      printerName: firstItem.printerName || "",
-
-      filamentId: firstItem.filamentId || "",
-      filamentName: firstItem.filamentName || "",
-      filamentColor: firstItem.filamentColor || "",
-
-      status: form.status,
-      soldAt: form.soldAt,
-      quantity: totalQuantity,
-      totalHours,
-      filamentGrams: totalGrams,
-      cost: totalCost,
-      price: totalPrice,
-      notes: form.notes || undefined,
-      deadline: form.deadline || undefined,
-    };
-
-    setSaving(true);
-
-    const result = editingOrder
-      ? await update(editingOrder.id, data, resolvedItems)
-      : await create(data, resolvedItems);
-
-    if (!result) {
-      setError(
-        "Não foi possível salvar o pedido. Confira o console do navegador.",
-      );
+    if (!form.clientName.trim()) {
+      setError("Informe o nome do cliente.");
       return;
     }
 
-    const previousItems = editingOrder
-      ? getOrderItems(editingOrder)
-      : [];
+    if (items.length === 0) {
+      setError("Adicione pelo menos um produto.");
+      return;
+    }
 
-    const previousCancelled = editingOrder?.status === "cancelled";
-    const nextItems = getOrderItems(result);
-
-    await reconcileStock(
-      previousItems,
-      previousCancelled,
-      nextItems,
-      result.status === "cancelled",
+    const selectedClient = clients.find(
+      (client) => client.id === form.clientId,
     );
 
-    if (editingOrder) {
-      if (result.status !== editingOrder.status) {
+    const resolvedItems: OrderItem[] = [];
+
+    try {
+      for (let index = 0; index < items.length; index++) {
+        const item = items[index];
+
+        if (!item.productName.trim() || !item.printerId) {
+          throw new Error(
+            `Informe o produto e selecione a impressora do item ${index + 1}.`,
+          );
+        }
+
+        const quantity = Number(item.quantity);
+        const minutes = Number(item.totalMinutes);
+        const price = Number(item.price);
+
+        if (
+          !Number.isInteger(quantity) ||
+          quantity < 1 ||
+          !Number.isFinite(minutes) ||
+          minutes < 0 ||
+          !Number.isFinite(price) ||
+          price < 0
+        ) {
+          throw new Error(
+            `Confira a quantidade, o tempo e o preço do item ${index + 1}.`,
+          );
+        }
+
+        const product = products.find((p) => p.id === item.productId);
+
+        const printer = printers.find((p) => p.id === item.printerId);
+
+        if (!printer) {
+          throw new Error(
+            `Não foi possível encontrar a impressora do item ${index + 1}.`,
+          );
+        }
+
+        // PRODUTO CADASTRADO: utiliza as cores e os consumos registrados.
+        if (product) {
+          const productColors = product.filamentColors ?? [];
+
+          if (productColors.length === 0 && Number(product.filamentGrams) > 0) {
+            throw new Error(
+              `O produto "${product.name}" possui consumo de filamento, mas não possui cores vinculadas. Configure os filamentos no cadastro do produto.`,
+            );
+          }
+
+          const itemFilaments = productColors.map((color) => {
+            const colorGrams = Math.max(0, Number(color.grams) || 0);
+
+            const filament = color.filamentId
+              ? filaments.find((f) => f.id === color.filamentId)
+              : undefined;
+
+            if (colorGrams > 0 && !filament) {
+              throw new Error(
+                `O filamento da cor "${color.name}" do produto "${product.name}" não está vinculado ao estoque.`,
+              );
+            }
+
+            const pricePerKg = Math.max(0, Number(color.pricePerKg) || 0);
+
+            return {
+              productColorId: color.id,
+              filamentId: color.filamentId ?? null,
+              filamentName: filament?.name ?? color.name,
+              filamentColor: filament?.color ?? color.name,
+              hexColor: color.hexColor ?? filament?.colorHex ?? null,
+              material: color.material ?? filament?.type ?? null,
+              grams: colorGrams,
+              pricePerKg,
+              cost: (colorGrams / 1000) * pricePerKg,
+            };
+          });
+
+          const totalGrams = itemFilaments.reduce(
+            (sum, filament) => sum + filament.grams,
+            0,
+          );
+
+          const totalCost = itemFilaments.reduce(
+            (sum, filament) => sum + filament.cost,
+            0,
+          );
+
+          const firstFilament = itemFilaments.find(
+            (filament) => filament.grams > 0,
+          );
+
+          resolvedItems.push({
+            productId: product.id,
+            productName: product.name,
+            printerId: printer.id,
+            printerName: printer.name,
+            filamentId: firstFilament?.filamentId ?? null,
+            filamentName: firstFilament?.filamentName ?? null,
+            filamentColor: firstFilament?.hexColor ?? null,
+            filaments: itemFilaments,
+            quantity,
+            totalHours: minutes / 60,
+            filamentGrams: totalGrams,
+            cost: totalCost,
+            price,
+          });
+        } else {
+          // PRODUTO MANUAL: não exige cadastro nem vínculo com estoque.
+          const manualGrams = Number(item.filamentGrams);
+
+          if (!Number.isFinite(manualGrams) || manualGrams < 0) {
+            throw new Error(
+              `Confira o consumo de filamento do item ${index + 1}.`,
+            );
+          }
+
+          resolvedItems.push({
+            productId: null,
+            productName: item.productName.trim(),
+            printerId: printer.id,
+            printerName: printer.name,
+            filamentId: null,
+            filamentName: "Consumo manual",
+            filamentColor: null,
+            filaments: [],
+            quantity,
+            totalHours: minutes / 60,
+            filamentGrams: manualGrams,
+            cost: 0,
+            price,
+          });
+        }
+      }
+
+      const firstItem = resolvedItems[0];
+
+      const totalQuantity = resolvedItems.reduce(
+        (sum, item) => sum + item.quantity,
+        0,
+      );
+
+      const totalHours = resolvedItems.reduce(
+        (sum, item) => sum + item.totalHours * item.quantity,
+        0,
+      );
+
+      const totalGrams = resolvedItems.reduce(
+        (sum, item) => sum + item.filamentGrams * item.quantity,
+        0,
+      );
+
+      const totalCost = resolvedItems.reduce(
+        (sum, item) => sum + item.cost * item.quantity,
+        0,
+      );
+
+      const totalPrice = resolvedItems.reduce(
+        (sum, item) => sum + item.price * item.quantity,
+        0,
+      );
+
+      const data = {
+        productId: firstItem.productId,
+        productName:
+          resolvedItems.length === 1
+            ? firstItem.productName
+            : `${firstItem.productName} + ${resolvedItems.length - 1} produto(s)`,
+
+        clientId: selectedClient?.id || "",
+        clientName: selectedClient?.name || form.clientName.trim(),
+
+        printerId: firstItem.printerId || "",
+        printerName: firstItem.printerName || "",
+
+        filamentId: firstItem.filamentId || "",
+        filamentName: firstItem.filamentName || "",
+        filamentColor: firstItem.filamentColor || "",
+
+        status: form.status,
+        soldAt: form.soldAt,
+        quantity: totalQuantity,
+        totalHours,
+        filamentGrams: totalGrams,
+        cost: totalCost,
+        price: totalPrice,
+        notes: form.notes || undefined,
+        deadline: form.deadline || undefined,
+      };
+
+      setSaving(true);
+
+      const result = editingOrder
+        ? await update(editingOrder.id, data, resolvedItems)
+        : await create(data, resolvedItems);
+
+      if (!result) {
+        setError(
+          "Não foi possível salvar o pedido. Confira o console do navegador.",
+        );
+        return;
+      }
+
+      const previousItems = editingOrder ? getOrderItems(editingOrder) : [];
+
+      const previousCancelled = editingOrder?.status === "cancelled";
+      const nextItems = getOrderItems(result);
+
+      await reconcileStock(
+        previousItems,
+        previousCancelled,
+        nextItems,
+        result.status === "cancelled",
+      );
+
+      if (editingOrder) {
+        if (result.status !== editingOrder.status) {
+          await createNotification({
+            type: "order",
+            referenceId: result.id,
+            title: "Status do pedido atualizado",
+            description: `Pedido #${result.orderNumber ?? ""} agora está ${translateStatus(result.status)}.`,
+          });
+        }
+      } else {
         await createNotification({
           type: "order",
           referenceId: result.id,
-          title: "Status do pedido atualizado",
-          description: `Pedido #${result.orderNumber ?? ""} agora está ${translateStatus(result.status)}.`,
+          title: "Novo pedido criado",
+          description: `Pedido #${result.orderNumber ?? ""} de ${result.clientName} criado.`,
         });
       }
-    } else {
-      await createNotification({
-        type: "order",
-        referenceId: result.id,
-        title: "Novo pedido criado",
-        description: `Pedido #${result.orderNumber ?? ""} de ${result.clientName} criado.`,
-      });
+
+      setModalOpen(false);
+    } catch (saveError) {
+      console.error("Erro ao salvar pedido:", saveError);
+
+      setError(
+        saveError instanceof Error
+          ? saveError.message
+          : "Ocorreu um erro ao salvar o pedido.",
+      );
+    } finally {
+      setSaving(false);
     }
-
-    setModalOpen(false);
-  } catch (saveError) {
-    console.error("Erro ao salvar pedido:", saveError);
-
-    setError(
-      saveError instanceof Error
-        ? saveError.message
-        : "Ocorreu um erro ao salvar o pedido.",
-    );
-  } finally {
-    setSaving(false);
   }
-}
-
-
 
   async function handleDelete(order: OrderWithItems) {
     if (!confirm("Tem certeza que deseja excluir este pedido?")) return;
@@ -731,82 +724,81 @@ async function handleSave(event: React.FormEvent<HTMLFormElement>) {
 
   return (
     <div className="orders-page relative min-h-screen overflow-hidden bg-[var(--app-background)] text-[var(--app-foreground)]">
-
       <style jsx global>{`
-  /* TEXTOS */
-  html[data-theme="light"] .orders-page .text-white {
-    color: var(--app-foreground) !important;
-  }
+        /* TEXTOS */
+        html[data-theme="light"] .orders-page .text-white {
+          color: var(--app-foreground) !important;
+        }
 
-  html[data-theme="light"] .orders-page [class*="text-white/"] {
-    color: var(--muted) !important;
-  }
+        html[data-theme="light"] .orders-page [class*="text-white/"] {
+          color: var(--muted) !important;
+        }
 
-  /* PRESERVA TEXTO BRANCO NOS BOTÕES LARANJAS */
-  html[data-theme="light"] .orders-page button.bg-gradient-to-r,
-  html[data-theme="light"] .orders-page button.bg-\\[\\#fd6401\\] {
-    color: #ffffff !important;
-  }
+        /* PRESERVA TEXTO BRANCO NOS BOTÕES LARANJAS */
+        html[data-theme="light"] .orders-page button.bg-gradient-to-r,
+        html[data-theme="light"] .orders-page button.bg-\\[\\#fd6401\\] {
+          color: #ffffff !important;
+        }
 
-  /* FUNDOS DOS CARTÕES */
-  html[data-theme="light"] .orders-page [class*="bg-white/"] {
-    background-color: var(--surface-light) !important;
-  }
+        /* FUNDOS DOS CARTÕES */
+        html[data-theme="light"] .orders-page [class*="bg-white/"] {
+          background-color: var(--surface-light) !important;
+        }
 
-  html[data-theme="light"] .orders-page [class*="bg-[#050914]"],
-  html[data-theme="light"] .orders-page [class*="bg-[#071124]"],
-  html[data-theme="light"] .orders-page [class*="bg-[#0a1120]"],
-  html[data-theme="light"] .orders-page [class*="bg-[#0A1120]"] {
-    background-color: var(--surface) !important;
-  }
+        html[data-theme="light"] .orders-page [class*="bg-[#050914]"],
+        html[data-theme="light"] .orders-page [class*="bg-[#071124]"],
+        html[data-theme="light"] .orders-page [class*="bg-[#0a1120]"],
+        html[data-theme="light"] .orders-page [class*="bg-[#0A1120]"] {
+          background-color: var(--surface) !important;
+        }
 
-  /* GRADIENTES */
-  html[data-theme="light"] .orders-page .bg-gradient-to-br {
-    background-image: none !important;
-    background-color: var(--surface) !important;
-  }
+        /* GRADIENTES */
+        html[data-theme="light"] .orders-page .bg-gradient-to-br {
+          background-image: none !important;
+          background-color: var(--surface) !important;
+        }
 
-  /* BORDAS */
-  html[data-theme="light"] .orders-page [class*="border-white/"] {
-    border-color: var(--border) !important;
-  }
+        /* BORDAS */
+        html[data-theme="light"] .orders-page [class*="border-white/"] {
+          border-color: var(--border) !important;
+        }
 
-  /* CAMPOS DE FORMULÁRIO */
-  html[data-theme="light"] .orders-page input,
-  html[data-theme="light"] .orders-page select,
-  html[data-theme="light"] .orders-page textarea {
-    color: var(--foreground);
-    background-color: var(--surface-light);
-  }
+        /* CAMPOS DE FORMULÁRIO */
+        html[data-theme="light"] .orders-page input,
+        html[data-theme="light"] .orders-page select,
+        html[data-theme="light"] .orders-page textarea {
+          color: var(--foreground);
+          background-color: var(--surface-light);
+        }
 
-  html[data-theme="light"] .orders-page input::placeholder,
-  html[data-theme="light"] .orders-page textarea::placeholder {
-    color: var(--muted);
-  }
+        html[data-theme="light"] .orders-page input::placeholder,
+        html[data-theme="light"] .orders-page textarea::placeholder {
+          color: var(--muted);
+        }
 
-  html[data-theme="light"] .orders-page option {
-    background-color: var(--surface);
-    color: var(--foreground);
-  }
+        html[data-theme="light"] .orders-page option {
+          background-color: var(--surface);
+          color: var(--foreground);
+        }
 
-  /* TABELA */
-  html[data-theme="light"] .orders-page tr:hover {
-    background-color: var(--surface-light);
-  }
+        /* TABELA */
+        html[data-theme="light"] .orders-page tr:hover {
+          background-color: var(--surface-light);
+        }
 
-  /* MODAL */
-  html[data-theme="light"] .orders-page [role="dialog"] {
-    color: var(--foreground);
-  }
+        /* MODAL */
+        html[data-theme="light"] .orders-page [role="dialog"] {
+          color: var(--foreground);
+        }
 
-  /* ÍCONES COM OPACIDADE BRANCA */
-  html[data-theme="light"] .orders-page svg.text-white\\/30,
-  html[data-theme="light"] .orders-page svg.text-white\\/40 {
-    color: var(--muted);
-  }
-`}</style>
+        /* ÍCONES COM OPACIDADE BRANCA */
+        html[data-theme="light"] .orders-page svg.text-white\\/30,
+        html[data-theme="light"] .orders-page svg.text-white\\/40 {
+          color: var(--muted);
+        }
+      `}</style>
       <div className="pointer-events-none fixed -right-40 -top-40 h-[500px] w-[500px] rounded-full bg-[rgba(var(--accent-rgb),0.06)] blur-[140px]" />
-     
+
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.045)_1px,transparent_0)] bg-[size:32px_32px]" />
 
       <div className="relative space-y-6 px-4 py-5 sm:p-6">
@@ -851,7 +843,7 @@ async function handleSave(event: React.FormEvent<HTMLFormElement>) {
                 value={orders.length}
                 description="Pedidos cadastrados"
               />
-              
+
               <SummaryCard
                 icon={CheckCircle2}
                 label="Concluídos"
@@ -961,7 +953,9 @@ async function handleSave(event: React.FormEvent<HTMLFormElement>) {
                               </p>
                               <p className="mt-0.5 text-[10px] text-white/30">
                                 {(Number(order.filamentGrams) || 0).toFixed(1)}g
-                                · {(Number(order.totalHours) || 0).toFixed(2)}h
+                                ·{formatDuration(
+  (Number(order.totalHours) || 0) * 60
+)}
                               </p>
                             </div>
                           </TableCell>
@@ -1107,7 +1101,9 @@ async function handleSave(event: React.FormEvent<HTMLFormElement>) {
                             Tempo
                           </p>
                           <p className="mt-1 text-xs text-white/70">
-                            {(Number(order.totalHours) || 0).toFixed(2)}h
+                            {formatDuration(
+  (Number(order.totalHours) || 0) * 60
+)}
                           </p>
                         </div>
                         <div>
@@ -1205,7 +1201,12 @@ async function handleSave(event: React.FormEvent<HTMLFormElement>) {
 
             <div className="grid gap-4 sm:grid-cols-3">
               <div>
-                <label htmlFor="client" className="mb-1.5 block text-sm font-medium text-white/65">Cliente</label>
+                <label
+                  htmlFor="client"
+                  className="mb-1.5 block text-sm font-medium text-white/65"
+                >
+                  Cliente
+                </label>
                 <input
                   id="client"
                   list="order-clients"
@@ -1217,9 +1218,15 @@ async function handleSave(event: React.FormEvent<HTMLFormElement>) {
                   className="h-11 w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 text-sm text-white outline-none placeholder:text-white/25 focus:border-[rgba(var(--accent-rgb),0.45)]"
                 />
                 <datalist id="order-clients">
-                  {[...clients].sort((a, b) => a.name.localeCompare(b.name, "pt-BR")).map((client) => <option key={client.id} value={client.name} />)}
+                  {[...clients]
+                    .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"))
+                    .map((client) => (
+                      <option key={client.id} value={client.name} />
+                    ))}
                 </datalist>
-                <p className="mt-1 text-[11px] text-white/35">Você pode usar um cliente cadastrado ou informar um novo nome.</p>
+                <p className="mt-1 text-[11px] text-white/35">
+                  Você pode usar um cliente cadastrado ou informar um novo nome.
+                </p>
               </div>
               <Select
                 id="status"
@@ -1261,7 +1268,7 @@ async function handleSave(event: React.FormEvent<HTMLFormElement>) {
               </div>
               <Button
                 type="button"
-                onClick={() => setItems((previous) => [...previous, newItem()])}
+                onClick={() => setItems((previous) => [newItem(), ...previous])}
                 className="h-9 bg-[rgba(var(--accent-rgb),0.1)] text-[rgba(var(--accent-rgb),0.95)] ring-1 ring-[rgba(var(--accent-rgb),0.25)] hover:bg-[rgba(var(--accent-rgb),0.16)]"
               >
                 <Plus className="h-4 w-4" /> Adicionar produto
@@ -1295,21 +1302,32 @@ async function handleSave(event: React.FormEvent<HTMLFormElement>) {
 
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
-                      <label htmlFor={`product-${item.key}`} className="mb-1.5 block text-sm font-medium text-white/65">Produto</label>
+                      <label
+                        htmlFor={`product-${item.key}`}
+                        className="mb-1.5 block text-sm font-medium text-white/65"
+                      >
+                        Produto
+                      </label>
                       <input
                         id={`product-${item.key}`}
                         list={`order-products-${item.key}`}
                         value={item.productName}
-                        onChange={(event) => selectProduct(item.key, event.target.value)}
+                        onChange={(event) =>
+                          selectProduct(item.key, event.target.value)
+                        }
                         placeholder="Digite ou selecione um produto"
                         required
                         autoComplete="off"
                         className="h-11 w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 text-sm text-white outline-none placeholder:text-white/25 focus:border-[rgba(var(--accent-rgb),0.45)]"
                       />
                       <datalist id={`order-products-${item.key}`}>
-                        {products.map((product) => <option key={product.id} value={product.name} />)}
+                        {products.map((product) => (
+                          <option key={product.id} value={product.name} />
+                        ))}
                       </datalist>
-                      <p className="mt-1 text-[11px] text-white/35">Produto cadastrado preenche os dados automaticamente.</p>
+                      <p className="mt-1 text-[11px] text-white/35">
+                        Produto cadastrado preenche os dados automaticamente.
+                      </p>
                     </div>
                     <Select
                       id={`printer-${item.key}`}
@@ -1325,7 +1343,7 @@ async function handleSave(event: React.FormEvent<HTMLFormElement>) {
                       required
                       className="border-white/10 bg-white/[0.04] text-white"
                     />
-                    
+
                     <Input
                       id={`quantity-${item.key}`}
                       label="Quantidade"
@@ -1336,7 +1354,6 @@ async function handleSave(event: React.FormEvent<HTMLFormElement>) {
                       onChange={(e) =>
                         updateItem(item.key, { quantity: e.target.value })
                       }
-                      
                       className="border-white/10 bg-white/[0.04] text-white"
                     />
                     <Input
@@ -1349,7 +1366,6 @@ async function handleSave(event: React.FormEvent<HTMLFormElement>) {
                       onChange={(e) =>
                         updateItem(item.key, { totalMinutes: e.target.value })
                       }
-                      
                       className="border-white/10 bg-white/[0.04] text-white"
                     />
                     <Input
@@ -1362,7 +1378,6 @@ async function handleSave(event: React.FormEvent<HTMLFormElement>) {
                       onChange={(e) =>
                         updateItem(item.key, { filamentGrams: e.target.value })
                       }
-                      
                       className="border-white/10 bg-white/[0.04] text-white"
                     />
                     <Input
@@ -1403,12 +1418,10 @@ async function handleSave(event: React.FormEvent<HTMLFormElement>) {
                     <span className="text-white/40">
                       Tempo:{" "}
                       <strong className="text-white">
-                        {(
-                          ((Number(item.totalMinutes) || 0) *
-                            (Number(item.quantity) || 0)) /
-                          60
-                        ).toFixed(2)}{" "}
-                        h
+                        {formatDuration(
+                          (Number(item.totalMinutes) || 0) *
+                            (Number(item.quantity) || 0),
+                        )}
                       </strong>
                     </span>
                   </div>
@@ -1421,7 +1434,7 @@ async function handleSave(event: React.FormEvent<HTMLFormElement>) {
                 { label: "Unidades", value: String(itemTotals.quantity) },
                 {
                   label: "Tempo total",
-                  value: `${(itemTotals.minutes / 60).toFixed(2)} h`,
+                  value: formatDuration(itemTotals.minutes),
                 },
                 {
                   label: "Filamento total",
