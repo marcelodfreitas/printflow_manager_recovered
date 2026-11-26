@@ -17,6 +17,7 @@ import {
   UserRound,
   X,
   Eye,
+  FileText,
 } from "lucide-react";
 
 import Link from "next/link";
@@ -208,6 +209,15 @@ function formatDuration(totalMinutes: number): string {
   return `${hours}h ${String(remainingMinutes).padStart(2, "0")}min`;
 }
 
+function escapeHtml(value: unknown): string {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 export default function OrdersPage() {
   const {
     orders,
@@ -227,6 +237,12 @@ export default function OrdersPage() {
   const [editingOrder, setEditingOrder] = useState<OrderWithItems | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  const [quoteModalOpen, setQuoteModalOpen] = useState(false);
+  const [quoteClient, setQuoteClient] = useState("");
+  const [quoteStatuses, setQuoteStatuses] = useState<string[]>(
+    orderStatuses.map((status) => status.value),
+  );
 
   const [form, setForm] = useState({
     clientId: "",
@@ -260,6 +276,66 @@ export default function OrdersPage() {
       );
     });
   }, [orders, search, statusFilter]);
+
+  const quoteClients = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          orders
+            .map((order) => order.clientName?.trim())
+            .filter((name): name is string => Boolean(name)),
+        ),
+      ).sort((a, b) => a.localeCompare(b, "pt-BR")),
+    [orders],
+  );
+
+  const quoteOrders = useMemo(
+    () =>
+      orders
+        .filter(
+          (order) =>
+            order.clientName === quoteClient &&
+            quoteStatuses.includes(order.status),
+        )
+        .sort(
+          (a, b) =>
+            new Date(a.createdAt || 0).getTime() -
+            new Date(b.createdAt || 0).getTime(),
+        ),
+    [orders, quoteClient, quoteStatuses],
+  );
+
+  const quoteItems = useMemo(
+    () =>
+      quoteOrders.flatMap((order) => {
+        const orderItems = getOrderItems(order);
+        const items =
+          orderItems.length > 0
+            ? orderItems
+            : [
+                {
+                  productName: order.productName || "Produto",
+                  quantity: order.quantity || 1,
+                  price:
+                    (Number(order.price) || 0) /
+                    Math.max(1, Number(order.quantity) || 1),
+                } as OrderItem,
+              ];
+
+        return items.map((item) => ({
+          createdAt: order.createdAt,
+          productName: item.productName || "Produto",
+          quantity: Math.max(1, Number(item.quantity) || 1),
+          unitPrice: Number(item.price) || 0,
+        }));
+      }),
+    [quoteOrders],
+  );
+
+  const quoteTotal = quoteItems.reduce(
+    (total, item) => total + item.unitPrice * item.quantity,
+    0,
+  );
 
   const currentMonth = getLocalDate().slice(0, 7);
 
@@ -707,6 +783,104 @@ export default function OrdersPage() {
     }
   }
 
+  function toggleQuoteStatus(status: string) {
+    setQuoteStatuses((previous) =>
+      previous.includes(status)
+        ? previous.filter((item) => item !== status)
+        : [...previous, status],
+    );
+  }
+
+  function generateQuotePdf() {
+    if (!quoteClient || quoteItems.length === 0) return;
+
+    const printWindow = window.open("", "_blank");
+
+    if (!printWindow) {
+      alert("Permita a abertura de pop-ups para gerar o PDF.");
+      return;
+    }
+
+    const rows = quoteItems
+      .map((item) => {
+        const subtotal = item.unitPrice * item.quantity;
+
+        return `
+          <tr>
+            <td>${escapeHtml(formatDate(item.createdAt))}</td>
+            <td>${escapeHtml(item.productName)}</td>
+            <td class="center">${item.quantity}</td>
+            <td class="right">${formatCurrency(item.unitPrice)}</td>
+            <td class="right">${formatCurrency(subtotal)}</td>
+          </tr>
+        `;
+      })
+      .join("");
+
+    const html = `
+      <!DOCTYPE html>
+      <html lang="pt-BR">
+        <head>
+          <meta charset="UTF-8" />
+          <title>Orçamento - ${escapeHtml(quoteClient)}</title>
+          <style>
+            * { box-sizing: border-box; }
+            body { margin: 0; padding: 36px; color: #20242b; font: 13px Arial, sans-serif; }
+            header { padding-bottom: 22px; border-bottom: 2px solid #fd6401; margin-bottom: 24px; }
+            h1 { margin: 0 0 6px; font-size: 23px; letter-spacing: .4px; }
+            h2 { margin: 0 0 18px; color: #555; font-size: 16px; font-weight: 500; }
+            .meta { display: flex; justify-content: space-between; gap: 16px; color: #555; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: left; }
+            th { background: #f5f6f7; color: #555; font-size: 11px; }
+            .center { text-align: center; }
+            .right { text-align: right; white-space: nowrap; }
+            .grand-total { display: flex; justify-content: flex-end; gap: 28px; margin-top: 28px; padding-top: 16px; border-top: 2px solid #20242b; font-size: 17px; font-weight: 700; }
+            footer { margin-top: 35px; color: #888; font-size: 10px; text-align: center; }
+            @media print { body { padding: 12mm; } }
+          </style>
+        </head>
+        <body>
+          <header>
+            <h1>MK STUDIO 3D</h1>
+            <h2>Orçamento</h2>
+            <div class="meta">
+              <span><strong>Cliente:</strong> ${escapeHtml(quoteClient)}</span>
+              <span><strong>Emissão:</strong> ${new Date().toLocaleDateString("pt-BR")}</span>
+            </div>
+          </header>
+          <table>
+            <thead>
+              <tr>
+                <th>Data do pedido</th>
+                <th>Produto</th>
+                <th class="center">Qtd.</th>
+                <th class="right">Valor unitário</th>
+                <th class="right">Valor</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+          <div class="grand-total">
+            <span>Total do orçamento</span>
+            <span>${formatCurrency(quoteTotal)}</span>
+          </div>
+          <footer>Documento gerado pelo PrintFlow Manager</footer>
+          <script>
+            window.onload = () => {
+              window.print();
+            };
+          </script>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.open();
+    printWindow.document.write(html);
+    printWindow.document.close();
+    setQuoteModalOpen(false);
+  }
+
   function productSummary(order: OrderWithItems) {
     const orderItems = getOrderItems(order);
 
@@ -821,13 +995,27 @@ export default function OrdersPage() {
             </p>
           </div>
 
-          <Button
-            onClick={openCreate}
-            className="h-11 w-full bg-gradient-to-r from-[#fd6401] to-[#e95400] text-white shadow-lg shadow-[rgba(var(--accent-rgb),0.16)] hover:brightness-110 sm:w-auto"
-          >
-            <Plus className="h-4 w-4" />
-            Novo Pedido
-          </Button>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setQuoteClient("");
+                setQuoteStatuses(orderStatuses.map((status) => status.value));
+                setQuoteModalOpen(true);
+              }}
+              className="h-11 w-full border border-white/10 bg-white/[0.04] text-white/75 hover:bg-white/[0.08] sm:w-auto"
+            >
+              <FileText className="h-4 w-4" />
+              Gerar orçamento PDF
+            </Button>
+            <Button
+              onClick={openCreate}
+              className="h-11 w-full bg-gradient-to-r from-[#fd6401] to-[#e95400] text-white shadow-lg shadow-[rgba(var(--accent-rgb),0.16)] hover:brightness-110 sm:w-auto"
+            >
+              <Plus className="h-4 w-4" />
+              Novo Pedido
+            </Button>
+          </div>
         </div>
 
         {ordersLoading ? (
@@ -1183,6 +1371,124 @@ export default function OrdersPage() {
           </>
         )}
       </div>
+
+      <Modal
+        isOpen={quoteModalOpen}
+        onClose={() => setQuoteModalOpen(false)}
+        title="Gerar orçamento em PDF"
+        size="lg"
+      >
+        <div className="space-y-5">
+          <div>
+            <label
+              htmlFor="quote-client"
+              className="mb-1.5 block text-sm font-medium text-white/65"
+            >
+              Cliente
+            </label>
+            <select
+              id="quote-client"
+              value={quoteClient}
+              onChange={(event) => setQuoteClient(event.target.value)}
+              className="h-11 w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 text-sm text-white outline-none focus:border-[rgba(var(--accent-rgb),0.45)]"
+            >
+              <option value="">Selecione um cliente</option>
+              {quoteClients.map((client) => (
+                <option key={client} value={client}>
+                  {client}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold text-white">
+                  Status dos pedidos
+                </h3>
+                <p className="mt-1 text-xs text-white/40">
+                  Selecione um ou mais status para incluir no documento.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() =>
+                  setQuoteStatuses(
+                    quoteStatuses.length === orderStatuses.length
+                      ? []
+                      : orderStatuses.map((status) => status.value),
+                  )
+                }
+                className="text-xs font-medium text-[var(--accent)] hover:underline"
+              >
+                {quoteStatuses.length === orderStatuses.length
+                  ? "Limpar"
+                  : "Selecionar todos"}
+              </button>
+            </div>
+
+            <div className="grid gap-2 sm:grid-cols-2">
+              {orderStatuses.map((status) => (
+                <label
+                  key={status.value}
+                  className="flex cursor-pointer items-center gap-2 rounded-xl border border-white/10 bg-white/[0.025] px-3 py-2.5 text-sm text-white/75"
+                >
+                  <input
+                    type="checkbox"
+                    checked={quoteStatuses.includes(status.value)}
+                    onChange={() => toggleQuoteStatus(status.value)}
+                    className="h-4 w-4 accent-[#fd6401]"
+                  />
+                  {status.label}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-xs text-white/45">
+                Itens que serão incluídos
+              </span>
+              <strong className="text-sm text-white">
+                {quoteItems.length}
+              </strong>
+            </div>
+            <div className="mt-2 flex items-center justify-between gap-3">
+              <span className="text-xs text-white/45">Total do orçamento</span>
+              <strong className="text-lg text-[var(--accent)]">
+                {formatCurrency(quoteTotal)}
+              </strong>
+            </div>
+            {quoteClient && quoteOrders.length === 0 && (
+              <p className="mt-2 text-xs text-amber-400">
+                Nenhum pedido encontrado para esse cliente com os status selecionados.
+              </p>
+            )}
+          </div>
+
+          <div className="flex flex-col-reverse gap-3 border-t border-white/5 pt-4 sm:flex-row sm:justify-end">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setQuoteModalOpen(false)}
+              className="bg-white/[0.04] text-white/60 ring-1 ring-white/10 hover:bg-white/[0.08] hover:text-white"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              disabled={!quoteClient || quoteOrders.length === 0}
+              onClick={generateQuotePdf}
+              className="bg-gradient-to-r from-[#fd6401] to-[#e95400] text-white shadow-lg shadow-[rgba(var(--accent-rgb),0.12)] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <FileText className="h-4 w-4" />
+              Gerar PDF
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       <Modal
         isOpen={modalOpen}
